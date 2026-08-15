@@ -12,13 +12,21 @@ from PIL import Image
 import gradio as gr
 import matplotlib.pyplot as plt
 import cv2
-
+from huggingface_hub import hf_hub_download
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-MODEL_PATH = "artifacts/checkpoints/best_model_experiment3.pt"
+MODEL_PATH = hf_hub_download(
+    repo_id="dhriti191/ai-knee-detection-resnet50",
+    filename="best_model_experiment3.pt"
+)
+
+MODEL_PATH = hf_hub_download(
+    repo_id="dhriti191/ai-knee-detection-resnet50",
+    filename="best_model_experiment3.pt"
+)
 
 DEVICE = torch.device(
     "cuda" if torch.cuda.is_available() else "cpu"
@@ -585,4 +593,8 @@ that contributed to the model's prediction.
 # LAUNCH
 # ============================================================
 
-demo.launch()
+if __name__ == "__main__":
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860
+    )
