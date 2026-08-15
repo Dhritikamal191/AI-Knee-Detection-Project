@@ -1,0 +1,53 @@
+project:
+  name: "RSNA Knee Abnormality Detection"
+  version: "1.0.0"
+  seed: 42
+
+data:
+  image_size: 224
+  num_slices: 8
+
+  metadata_csv: "data/external/train.csv"
+  train_csv: "data/processed/train.csv"
+  val_csv: "data/processed/val.csv"
+  test_csv: "data/processed/test.csv"
+
+  image_dir: "data/raw"
+
+  study_id_column: "StudyInstanceUID"
+
+training:
+  batch_size: 8
+  epochs: 10
+
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+
+  num_workers: 0
+
+  mixed_precision: true
+
+  early_stopping:
+    enabled: true
+    patience: 3
+
+  checkpoint:
+    save_best_only: true
+    monitor: "val_loss"
+    mode: "min"
+
+inference:
+  threshold: 0.5
+  device: "auto"
+
+paths:
+  model_dir: "models"
+  checkpoint_dir: "models/checkpoints"
+
+  metrics_dir: "artifacts/metrics"
+  prediction_dir: "artifacts/predictions"
+  report_dir: "artifacts/reports"
+
+logging:
+  level: "INFO"
+  file: "artifacts/training.log"

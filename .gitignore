@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+data/raw/*
+data/processed/*
+data/external/*
+
+# Large model files
+models/*.pth
+models/*.pt
+models/*.ckpt
+models/checkpoints/*
+
+# Generated artifacts
+artifacts/*
+logs/
+
+# MLflow
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
+
+# Hugging Face model repository / large model files
+ai-knee-detection-resnet50/*.pt

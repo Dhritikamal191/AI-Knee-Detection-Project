@@ -1,0 +1,36 @@
+model:
+  architecture: "resnet50"
+
+  pretrained: true
+
+  num_classes: 12
+
+  dropout: 0.3
+
+  freeze_backbone: false
+
+  pooling: "attention"
+
+loss:
+  name: "bce_with_logits"
+
+  pos_weight: true
+
+optimizer:
+  name: "adamw"
+
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+
+scheduler:
+  name: "cosine"
+
+  warmup_epochs: 1
+
+augmentation:
+  enabled: true
+
+  horizontal_flip: true
+  rotation: 10
+  brightness: 0.1
+  contrast: 0.1
