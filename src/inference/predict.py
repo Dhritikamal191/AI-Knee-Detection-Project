@@ -4,17 +4,19 @@ import sys
 import torch
 from PIL import Image
 from torchvision import transforms
-
+from huggingface_hub import hf_hub_download
 from src.models.ordinal_resnet50 import OrdinalResNet50
 from src.models.training_config import get_device
-
 
 # ============================================================
 # CONFIG
 # ============================================================
 
 MODEL_PATH = Path(
-    "artifacts/checkpoints/best_model_experiment5.pt"
+    hf_hub_download(
+        repo_id="dhriti191/ai-knee-detection-resnet50",
+        filename="best_model_experiment5.pt"
+    )
 )
 
 IMAGE_SIZE = 224

@@ -8,8 +8,8 @@ import cv2
 
 from PIL import Image
 from torchvision import transforms
-
-from src.training.train_experiment5 import OrdinalResNet50
+from huggingface_hub import hf_hub_download
+from src.models.ordinal_resnet50 import OrdinalResNet50
 from src.models.training_config import get_device
 
 
@@ -18,8 +18,10 @@ from src.models.training_config import get_device
 # ============================================================
 
 MODEL_PATH = Path(
-    "artifacts/checkpoints/"
-    "best_model_experiment5.pt"
+    hf_hub_download(
+        repo_id="dhriti191/ai-knee-detection-resnet50",
+        filename="best_model_experiment5.pt"
+    )
 )
 
 OUTPUT_DIR = Path(
