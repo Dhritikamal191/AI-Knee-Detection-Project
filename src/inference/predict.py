@@ -1,10 +1,11 @@
 from pathlib import Path
+import sys
 
 import torch
 from PIL import Image
 from torchvision import transforms
 
-from src.models.knee_classifier import KneeClassifier
+from src.models.ordinal_resnet50 import OrdinalResNet50
 from src.models.training_config import get_device
 
 
@@ -13,10 +14,12 @@ from src.models.training_config import get_device
 # ============================================================
 
 MODEL_PATH = Path(
-    "artifacts/checkpoints/best_model_experiment3.pt"
+    "artifacts/checkpoints/best_model_experiment5.pt"
 )
 
 IMAGE_SIZE = 224
+
+NUM_CLASSES = 5
 
 CLASS_NAMES = [
     "0",
@@ -63,19 +66,25 @@ def load_model():
 
     device = get_device()
 
-    model = KneeClassifier(
-        num_classes=5,
-        pretrained=False,
-        freeze_backbone=False
+    print(
+        f"Using device: {device}"
+    )
+
+    model = OrdinalResNet50(
+        num_classes=NUM_CLASSES,
+        pretrained=False
     ).to(device)
 
     checkpoint = torch.load(
         MODEL_PATH,
-        map_location=device
+        map_location=device,
+        weights_only=False
     )
 
     model.load_state_dict(
-        checkpoint["model_state_dict"]
+        checkpoint[
+            "model_state_dict"
+        ]
     )
 
     model.eval()
@@ -84,11 +93,68 @@ def load_model():
 
 
 # ============================================================
+# ORDINAL DECODING
+# ============================================================
+
+def ordinal_to_grade(
+    probabilities
+):
+
+    grade = int(
+        (
+            probabilities >= 0.5
+        ).sum()
+    )
+
+    return grade
+
+
+# ============================================================
+# GRADE PROBABILITIES
+# ============================================================
+
+def calculate_grade_probabilities(
+    threshold_probabilities
+):
+
+    p1 = threshold_probabilities[0]
+    p2 = threshold_probabilities[1]
+    p3 = threshold_probabilities[2]
+    p4 = threshold_probabilities[3]
+
+    return {
+
+        "0": 1.0 - p1,
+
+        "1": p1 - p2,
+
+        "2": p2 - p3,
+
+        "3": p3 - p4,
+
+        "4": p4
+    }
+
+
+# ============================================================
 # PREDICT
 # ============================================================
 
 @torch.no_grad()
-def predict(image_path):
+def predict(
+    image_path
+):
+
+    image_path = Path(
+        image_path
+    )
+
+    if not image_path.exists():
+
+        raise FileNotFoundError(
+            f"Image not found: "
+            f"{image_path}"
+        )
 
     model, device = load_model()
 
@@ -98,58 +164,129 @@ def predict(image_path):
 
     tensor = transform(
         image
-    ).unsqueeze(0).to(device)
+    ).unsqueeze(
+        0
+    ).to(device)
 
-    outputs = model(tensor)
+    # --------------------------------------------------------
+    # ORDINAL MODEL OUTPUT
+    # --------------------------------------------------------
 
-    probabilities = torch.softmax(
-        outputs,
-        dim=1
+    logits = model(
+        tensor
     )
 
-    confidence, prediction = torch.max(
-        probabilities,
-        dim=1
-    )
+    # Four ordinal threshold probabilities
+    threshold_tensor = torch.sigmoid(
+        logits
+    )[0]
 
-    predicted_class = (
-        prediction.item()
-    )
-
-    confidence_value = (
-        confidence.item()
-    )
-
-    probability_values = (
-        probabilities[0]
+    threshold_probabilities = (
+        threshold_tensor
         .cpu()
         .tolist()
     )
 
+    # --------------------------------------------------------
+    # PREDICT GRADE
+    # --------------------------------------------------------
+
+    predicted_grade = ordinal_to_grade(
+        threshold_tensor
+    )
+
+    # --------------------------------------------------------
+    # GRADE PROBABILITIES
+    # --------------------------------------------------------
+
+    grade_probabilities = (
+        calculate_grade_probabilities(
+            threshold_probabilities
+        )
+    )
+
+    # Small numerical errors can occasionally
+    # produce values such as -0.000001.
+    grade_probabilities = {
+
+        grade: max(
+            0.0,
+            min(
+                1.0,
+                probability
+            )
+        )
+
+        for grade, probability
+        in grade_probabilities.items()
+    }
+
+    # --------------------------------------------------------
+    # CONFIDENCE
+    # --------------------------------------------------------
+    #
+    # Confidence is the probability assigned
+    # to the predicted grade.
+    # --------------------------------------------------------
+
+    confidence = grade_probabilities[
+        str(predicted_grade)
+    ]
+
     return {
-        "prediction": CLASS_NAMES[
-            predicted_class
-        ],
+
+        "prediction":
+            CLASS_NAMES[
+                predicted_grade
+            ],
+
+        "prediction_index":
+            predicted_grade,
 
         "confidence":
-            confidence_value,
+            confidence,
 
-        "probabilities":
-            {
-                CLASS_NAMES[i]:
-                    probability_values[i]
-                for i in range(5)
+        "confidence_percent":
+            confidence * 100,
+
+        "threshold_probabilities": {
+
+            "Grade >= 1":
+                threshold_probabilities[0],
+
+            "Grade >= 2":
+                threshold_probabilities[1],
+
+            "Grade >= 3":
+                threshold_probabilities[2],
+
+            "Grade >= 4":
+                threshold_probabilities[3]
+        },
+
+        "grade_probabilities": {
+
+            grade: {
+
+                "probability":
+                    probability,
+
+                "probability_percent":
+                    probability * 100
+
             }
+
+            for grade, probability
+            in grade_probabilities.items()
+        }
     }
 
 
 # ============================================================
-# TEST FROM COMMAND LINE
+# COMMAND LINE
 # ============================================================
 
 if __name__ == "__main__":
-
-    import sys
 
     if len(sys.argv) < 2:
 
@@ -158,7 +295,8 @@ if __name__ == "__main__":
         )
 
         print(
-            "python -m src.inference.predict "
+            "python -m "
+            "src.inference.predict "
             "<image_path>"
         )
 
@@ -167,23 +305,37 @@ if __name__ == "__main__":
     image_path = sys.argv[1]
 
     print(
-        "\nLoading Experiment 3 model..."
+        "\n"
+        + "=" * 60
+    )
+
+    print(
+        "Loading Experiment 5..."
+    )
+
+    print(
+        "=" * 60
     )
 
     result = predict(
         image_path
     )
 
+    # --------------------------------------------------------
+    # RESULT
+    # --------------------------------------------------------
+
     print(
-        "\n================================"
+        "\n"
+        + "=" * 60
     )
 
     print(
-        "PREDICTION"
+        "PREDICTION RESULT"
     )
 
     print(
-        "================================"
+        "=" * 60
     )
 
     print(
@@ -193,18 +345,45 @@ if __name__ == "__main__":
 
     print(
         f"Confidence: "
-        f"{result['confidence'] * 100:.2f}%"
+        f"{result['confidence_percent']:.2f}%"
     )
+
+    # --------------------------------------------------------
+    # THRESHOLD PROBABILITIES
+    # --------------------------------------------------------
 
     print(
-        "\nClass Probabilities:"
+        "\nOrdinal threshold probabilities:"
     )
 
-    for class_name, probability in (
-        result["probabilities"].items()
-    ):
+    for (
+        threshold,
+        probability
+    ) in result[
+        "threshold_probabilities"
+    ].items():
 
         print(
-            f"Grade {class_name}: "
+            f"{threshold}: "
             f"{probability * 100:.2f}%"
+        )
+
+    # --------------------------------------------------------
+    # GRADE PROBABILITIES
+    # --------------------------------------------------------
+
+    print(
+        "\nClass probabilities:"
+    )
+
+    for (
+        grade,
+        values
+    ) in result[
+        "grade_probabilities"
+    ].items():
+
+        print(
+            f"Grade {grade}: "
+            f"{values['probability_percent']:.2f}%"
         )
