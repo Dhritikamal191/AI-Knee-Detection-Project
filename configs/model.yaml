@@ -1,5 +1,6 @@
 model:
-  name: "Experiment 5"
+  name: ordinal_resnet50
+  experiment: experiment5
   architecture: "OrdinalResNet50"
 
   repository:
@@ -23,6 +24,11 @@ model:
   ordinal:
     num_thresholds: 4
     threshold: 0.5
+    device: auto
+
+  model_repository:
+    repo_id: dhriti191/ai-knee-detection-resnet50
+    filename: best_model_experiment5.pt
 
   preprocessing:
     resize:
