@@ -6,7 +6,7 @@ scipy
 torch
 torchvision
 
-opencv-python
+opencv-python-headless
 Pillow
 
 albumentations
@@ -34,4 +34,3 @@ prometheus-client
 mlflow
 
 gradio
-opencv-python-headless
