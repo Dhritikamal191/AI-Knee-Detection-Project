@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 import hashlib
 import torch
+import torchvision
 import streamlit as st
 from PIL import Image
 from src.inference.predict import predict, MODEL_PATH
@@ -173,6 +174,9 @@ with st.sidebar:
     st.write(
         f"**Device:** `{torch.cuda.is_available() and 'CUDA' or 'CPU'}`"
     )
+    st.write("PyTorch:", torch.__version__)
+    st.write("Torchvision:", torchvision.__version__)
+    st.write("Device:", "CUDA" if torch.cuda.is_available() else "CPU")
     
 # ============================================================
 # IMAGE UPLOAD
