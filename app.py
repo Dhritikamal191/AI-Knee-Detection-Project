@@ -1,7 +1,8 @@
 import sys
 from pathlib import Path
 import tempfile
-
+import hashlib
+import torch
 import streamlit as st
 from PIL import Image
 
@@ -9,6 +10,16 @@ from PIL import Image
 # PROJECT ROOT
 # ============================================================
 
+def get_model_hash(model_path):
+
+    sha256 = hashlib.sha256()
+
+    with open(model_path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            sha256.update(chunk)
+
+    return sha256.hexdigest()
+    
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 if str(PROJECT_ROOT) not in sys.path:
