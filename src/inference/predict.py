@@ -1,6 +1,6 @@
 from pathlib import Path
 import sys
-
+import hashlib
 import torch
 from PIL import Image
 from torchvision import transforms
@@ -11,6 +11,14 @@ from src.models.training_config import get_device
 # ============================================================
 # CONFIG
 # ============================================================
+def get_model_hash(path):
+    sha256 = hashlib.sha256()
+
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            sha256.update(chunk)
+
+    return sha256.hexdigest()
 
 MODEL_PATH = Path(
     hf_hub_download(
@@ -68,9 +76,9 @@ def load_model():
 
     device = get_device()
 
-    print(
-        f"Using device: {device}"
-    )
+    print(f"Using device: {device}")
+    print(f"Model path: {MODEL_PATH}")
+    print(f"Model SHA256: {get_model_hash(MODEL_PATH)}")
 
     model = OrdinalResNet50(
         num_classes=NUM_CLASSES,
