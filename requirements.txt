@@ -25,7 +25,7 @@ pydantic
 
 streamlit
 requests
-opencv-python
+
 pytest
 httpx
 
