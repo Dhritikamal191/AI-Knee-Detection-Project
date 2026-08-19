@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 import tempfile
-import opencv
+import cv2
 import streamlit as st
 from PIL import Image
 
