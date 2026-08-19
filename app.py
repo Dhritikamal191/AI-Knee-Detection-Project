@@ -5,7 +5,7 @@ import hashlib
 import torch
 import streamlit as st
 from PIL import Image
-
+from src.inference.predict import predict, MODEL_PATH
 # ============================================================
 # PROJECT ROOT
 # ============================================================
@@ -161,6 +161,19 @@ with st.sidebar:
     st.metric("Macro F1", "59.89%")
     st.metric("Quadratic Weighted Kappa", "77.07%")
 
+    st.write(
+        f"**Model SHA256:**\n\n"
+        f"`{get_model_hash(MODEL_PATH)}`"
+    )
+
+    st.write(
+        f"**PyTorch:** `{torch.__version__}`"
+    )
+
+    st.write(
+        f"**Device:** `{torch.cuda.is_available() and 'CUDA' or 'CPU'}`"
+    )
+    
 # ============================================================
 # IMAGE UPLOAD
 # ============================================================
