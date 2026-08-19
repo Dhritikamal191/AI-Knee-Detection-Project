@@ -32,6 +32,6 @@ httpx
 prometheus-client
 
 mlflow
-
+cv2
 gradio
 opencv-python-headless
