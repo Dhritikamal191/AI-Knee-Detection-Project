@@ -25,7 +25,7 @@ pydantic
 
 streamlit
 requests
-
+cv2
 pytest
 httpx
 
