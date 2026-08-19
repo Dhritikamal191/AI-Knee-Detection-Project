@@ -179,13 +179,13 @@ if uploaded_file is not None:
 
         st.image(
             image,
-            use_container_width=True
+            width="stretch"
         )
 
     if st.button(
         "🔍 Analyze X-ray",
         type="primary",
-        use_container_width=True
+        width="stretch"
     ):
 
         with st.spinner("Running Experiment 5..."):
@@ -338,7 +338,7 @@ if uploaded_file is not None:
 
                 st.image(
                     image,
-                    use_container_width=True
+                    width="stretch"
                 )
 
             with gradcam_col2:
@@ -349,7 +349,7 @@ if uploaded_file is not None:
 
                 st.image(
                     str(overlay_path),
-                    use_container_width=True
+                    width="stretch"
                 )
 
         else:
