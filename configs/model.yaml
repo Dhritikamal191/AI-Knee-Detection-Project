@@ -26,10 +26,6 @@ model:
     threshold: 0.5
     device: auto
 
-  model_repository:
-    repo_id: dhriti191/ai-knee-detection-resnet50
-    filename: best_model_experiment5.pt
-
   preprocessing:
     resize:
       width: 224

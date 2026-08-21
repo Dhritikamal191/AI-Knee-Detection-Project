@@ -18,7 +18,7 @@ tqdm
 matplotlib
 seaborn
 
-FastAPI
+fastapi
 uvicorn
 python-multipart
 pydantic
