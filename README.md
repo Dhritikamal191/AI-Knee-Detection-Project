@@ -147,11 +147,10 @@ artifacts/
         └─────────────────────┘
 
                  API Layer
-                    │
+                    |
         ┌───────────┴───────────┐
         ▼                       ▼
    FastAPI API             Streamlit UI
-        │                       │
         └───────────┬───────────┘
                     ▼
              Docker Compose
