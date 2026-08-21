@@ -151,6 +151,7 @@ artifacts/
         ┌───────────┴───────────┐
         ▼                       ▼
    FastAPI API             Streamlit UI
+   
         └───────────┬───────────┘
                     ▼
              Docker Compose
