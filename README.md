@@ -71,3 +71,13 @@ Backbone: ResNet50
 Input Size: 224 × 224
 Number of Classes: 5
 Number of Ordinal Thresholds: 4
+
+## 📊 Model Performance
+
+The recorded evaluation metrics for Experiment 5 are:
+
+| Metric                   |  Score |
+| ------------------------ | -----: |
+| Accuracy                 | 60.93% |
+| Macro F1                 | 59.89% |
+| Quadratic Weighted Kappa | 77.07% |
