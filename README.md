@@ -150,7 +150,7 @@ artifacts/
                     |
         ┌───────────┴───────────┐
         ▼                       ▼
-   FastAPI API             Streamlit UI
+   FastAPI API                                   Streamlit UI
    
         └───────────┬───────────┘
                     ▼
