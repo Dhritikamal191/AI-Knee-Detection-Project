@@ -418,21 +418,71 @@ details {
    FOOTER
    ========================================================= */
 
-.footer-line {
-    margin-top: 60px;
-    padding-top: 25px;
+.project-footer {
+        margin-top: 35px;
+        padding: 32px 36px;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 20px;
+        background:
+            linear-gradient(
+                145deg,
+                rgba(25, 28, 38, 0.95),
+                rgba(15, 17, 24, 0.98)
+            );
+        box-shadow:
+            0 12px 35px rgba(0, 0, 0, 0.20);
+        text-align: center;
+    }
 
-    border-top:
-        1px solid rgba(255,255,255,0.07);
+.project-title {
+        font-size: 1.45rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #f8fafc;
+        margin-bottom: 10px;
+    }
 
-    text-align: center;
+.project-subtitle {
+        font-size: 0.92rem;
+        color: #94a3b8;
+        margin-bottom: 22px;
+    }
 
-    color: #626775;
+.project-divider {
+        height: 1px;
+        width: 70%;
+        margin: 0 auto 22px auto;
+        background: rgba(148, 163, 184, 0.15);
+    }
 
-    font-size: 0.75rem;
-    line-height: 1.7;
-}
+.project-description {
+        max-width: 760px;
+        margin: 0 auto;
+        color: #cbd5e1;
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
 
+.project-badge {
+        display: inline-block;
+        margin-top: 22px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: rgba(59, 130, 246, 0.10);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        color: #93c5fd;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+.project-disclaimer {
+        max-width: 650px;
+        margin: 18px auto 0 auto;
+        color: #64748b;
+        font-size: 0.78rem;
+        line-height: 1.6;
+    }
 
 /* =========================================================
    MOBILE
