@@ -414,77 +414,6 @@ details {
     font-size: 0.82rem;
 }
 
-
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
-.project-footer {
-        margin-top: 35px;
-        padding: 32px 36px;
-        border: 1px solid rgba(148, 163, 184, 0.15);
-        border-radius: 20px;
-        background:
-            linear-gradient(
-                145deg,
-                rgba(25, 28, 38, 0.95),
-                rgba(15, 17, 24, 0.98)
-            );
-        box-shadow:
-            0 12px 35px rgba(0, 0, 0, 0.20);
-        text-align: center;
-    }
-
-.project-title {
-        font-size: 1.45rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #f8fafc;
-        margin-bottom: 10px;
-    }
-
-.project-subtitle {
-        font-size: 0.92rem;
-        color: #94a3b8;
-        margin-bottom: 22px;
-    }
-
-.project-divider {
-        height: 1px;
-        width: 70%;
-        margin: 0 auto 22px auto;
-        background: rgba(148, 163, 184, 0.15);
-    }
-
-.project-description {
-        max-width: 760px;
-        margin: 0 auto;
-        color: #cbd5e1;
-        font-size: 0.95rem;
-        line-height: 1.7;
-    }
-
-.project-badge {
-        display: inline-block;
-        margin-top: 22px;
-        padding: 8px 16px;
-        border-radius: 999px;
-        background: rgba(59, 130, 246, 0.10);
-        border: 1px solid rgba(59, 130, 246, 0.25);
-        color: #93c5fd;
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-    }
-
-.project-disclaimer {
-        max-width: 650px;
-        margin: 18px auto 0 auto;
-        color: #64748b;
-        font-size: 0.78rem;
-        line-height: 1.6;
-    }
-
 /* =========================================================
    MOBILE
    ========================================================= */
@@ -2598,8 +2527,76 @@ elif page == "System":
 # FOOTER
 # ============================================================
 
-st.markdown(
-    """
+st.html("""
+<style>
+
+.project-footer {
+    margin: 40px 0 20px 0;
+    padding: 32px 36px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 22px;
+    background: linear-gradient(
+        145deg,
+        #181b24,
+        #101218
+    );
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    text-align: center;
+}
+
+.project-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 10px;
+}
+
+.project-subtitle {
+    font-size: 14px;
+    color: #94a3b8;
+    margin-bottom: 24px;
+}
+
+.project-divider {
+    width: 90px;
+    height: 2px;
+    margin: 0 auto 24px auto;
+    background: #6366f1;
+    border-radius: 999px;
+}
+
+.project-description {
+    max-width: 720px;
+    margin: 0 auto;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #cbd5e1;
+}
+
+.project-badge {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.30);
+    color: #a5b4fc;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.project-disclaimer {
+    max-width: 650px;
+    margin: 18px auto 0 auto;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #64748b;
+}
+
+</style>
+
 <div class="project-footer">
 
     <div class="project-title">
@@ -2607,7 +2604,9 @@ st.markdown(
     </div>
 
     <div class="project-subtitle">
-        Ordinal ResNet50 &nbsp;•&nbsp; Experiment 5 &nbsp;•&nbsp; Explainable AI
+        Ordinal ResNet50 &nbsp;•&nbsp;
+        Experiment 5 &nbsp;•&nbsp;
+        Explainable AI
     </div>
 
     <div class="project-divider"></div>
@@ -2628,6 +2627,4 @@ st.markdown(
     </div>
 
 </div>
-""",
-    unsafe_allow_html=True
-)
+""")
