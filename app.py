@@ -50,7 +50,37 @@ MODEL_SHA256 = (
     "f2200b43966dce1498e47ad6ee45cb35e5cec831246b7667323e16fd9d7e1667"
 )
 
+def get_class_probabilities(result):
+    """
+    Extract Grade 0-4 probabilities from predict() output.
+    Returns percentages.
+    """
 
+    grade_probabilities = result.get(
+        "grade_probabilities",
+        {}
+    )
+
+    probabilities = []
+
+    for grade in ["0", "1", "2", "3", "4"]:
+
+        values = grade_probabilities.get(
+            grade,
+            {}
+        )
+
+        probability = values.get(
+            "probability_percent",
+            0.0
+        )
+
+        probabilities.append(
+            float(probability)
+        )
+
+    return probabilities
+    
 # ============================================================
 # MODEL CONFIG
 # ============================================================
@@ -1760,55 +1790,117 @@ if page == "Prediction":
                         "Not available",
                     )
 
-            # -----------------------------------------------
+            # ============================================================
             # CLASS PROBABILITY DISTRIBUTION
-            # -----------------------------------------------
+            # ============================================================
 
             st.divider()
 
-            st.subheader("Class Probability Distribution")
-
-            probabilities = extract_probabilities(result)
-
-            if probabilities is not None and len(probabilities) == 5:
-
-               probability_df = pd.DataFrame({
-               "Grade": GRADE_NAMES,
-               "Probability": probabilities
-               })
-
-               # -------------------------------------------
-               # BAR CHART
-               # -------------------------------------------
-
-               st.bar_chart(
-               probability_df.set_index("Grade"),
-               y="Probability",
-               height=350,
-               )
-
-               # -------------------------------------------
-               # EXACT VALUES
-               # -------------------------------------------
-
-               cols = st.columns(5)
-
-               for i, probability in enumerate(probabilities):
-
-                   with cols[i]:
-
-                        st.metric(
-                GRADE_NAMES[i],
-                f"{probability:.2f}%"
-                )
-
-            else:
-
-                  st.warning(
-        "Class probability distribution is not available "
-        "from the current prediction response."
+            st.subheader(
+             "Class Probability Distribution"
             )
-                
+
+            probabilities = get_class_probabilities(
+            result
+            )
+
+            probability_df = pd.DataFrame({
+
+            "Grade": [
+            "Grade 0",
+            "Grade 1",
+            "Grade 2",
+            "Grade 3",
+            "Grade 4"
+            ],
+
+            "Probability": probabilities
+            })
+
+
+            # ============================================================
+            # PROBABILITY CHART
+            # ============================================================
+
+            fig = px.bar(
+
+            probability_df,
+
+            x="Grade",
+
+            y="Probability",
+
+            text="Probability",
+
+            labels={
+        "Probability": "Probability (%)",
+        "Grade": "Severity Grade"
+            },
+
+            title="Model Class Probability Distribution"
+
+            )
+
+            fig.update_traces(
+
+            texttemplate="%{text:.2f}%",
+
+            textposition="outside"
+
+            )
+
+            fig.update_layout(
+
+            yaxis=dict(
+
+            range=[
+            0,
+            max(
+                100,
+                max(probabilities) + 10
+            )
+            ],
+
+            ticksuffix="%"
+
+            ),
+
+            xaxis_title="Severity Grade",
+
+            yaxis_title="Probability (%)",
+
+            height=450,
+
+            showlegend=False
+
+            )
+
+            st.plotly_chart(
+
+            fig,
+
+            use_container_width=True
+
+            )
+
+            # ============================================================
+            # PROBABILITY METRICS
+            # ============================================================
+
+            cols = st.columns(5)
+
+            for i, probability in enumerate(probabilities):
+
+                with cols[i]:
+
+                     st.metric(
+
+            f"Grade {i}",
+
+            f"{probability:.2f}%"
+
+             )
+                    
             # -----------------------------------------------
             # CLINICAL INTERPRETATION
             # -----------------------------------------------
