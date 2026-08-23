@@ -1,86 +1,94 @@
 from pathlib import Path
 
+import numpy as np
+from PIL import Image
+
 from src.inference.predict import predict
 
 
-TEST_IMAGE = Path(
-    "data/raw/KneeXrayMini/val/2/9986207L.png"
-)
+def create_test_image(tmp_path: Path) -> Path:
+    """
+    Create a synthetic RGB image for inference testing.
 
+    This keeps CI independent of the local training/validation dataset.
+    """
 
-def test_prediction_returns_result():
-
-    assert TEST_IMAGE.exists(), (
-        f"Test image not found: {TEST_IMAGE}"
+    image_array = np.zeros(
+        (224, 224, 3),
+        dtype=np.uint8
     )
 
-    result = predict(
-        TEST_IMAGE
+    # Add a simple non-uniform structure so the image
+    # is not completely blank.
+    image_array[60:170, 70:150] = 128
+
+    image = Image.fromarray(
+        image_array,
+        mode="RGB"
     )
 
-    assert isinstance(
-        result,
-        dict
-    )
+    image_path = tmp_path / "test_knee_xray.png"
+
+    image.save(image_path)
+
+    return image_path
 
 
-def test_prediction_grade_is_valid():
+def test_prediction_returns_result(tmp_path):
+    test_image = create_test_image(tmp_path)
 
-    result = predict(
-        TEST_IMAGE
-    )
+    result = predict(test_image)
 
-    assert result["prediction_index"] in {
-        0, 1, 2, 3, 4
-    }
+    assert result is not None
+    assert isinstance(result, dict)
 
 
-def test_confidence_is_valid():
+def test_prediction_grade_is_valid(tmp_path):
+    test_image = create_test_image(tmp_path)
 
-    result = predict(
-        TEST_IMAGE
-    )
+    result = predict(test_image)
 
-    confidence = result[
-        "confidence"
-    ]
+    grade = result["prediction_index"]
+
+    assert grade in [0, 1, 2, 3, 4]
+
+
+def test_confidence_is_valid(tmp_path):
+    test_image = create_test_image(tmp_path)
+
+    result = predict(test_image)
+
+    confidence = result["confidence"]
 
     assert 0.0 <= confidence <= 1.0
 
 
-def test_grade_probabilities_are_valid():
+def test_grade_probabilities_are_valid(tmp_path):
+    test_image = create_test_image(tmp_path)
 
-    result = predict(
-        TEST_IMAGE
-    )
+    result = predict(test_image)
 
-    probabilities = {
-        grade: values["probability"]
-        for grade, values
-        in result[
-            "grade_probabilities"
-        ].items()
-    }
+    probabilities = result["grade_probabilities"]
 
     assert len(probabilities) == 5
 
-    for probability in probabilities.values():
+    for grade, values in probabilities.items():
+
+        probability = values["probability"]
 
         assert 0.0 <= probability <= 1.0
 
 
-def test_grade_probabilities_sum_to_one():
+def test_grade_probabilities_sum_to_one(tmp_path):
+    test_image = create_test_image(tmp_path)
 
-    result = predict(
-        TEST_IMAGE
-    )
+    result = predict(test_image)
+
+    probabilities = result["grade_probabilities"]
 
     total = sum(
         values["probability"]
-        for values
-        in result[
-            "grade_probabilities"
-        ].values()
+        for values in probabilities.values()
     )
 
     assert abs(total - 1.0) < 1e-5
