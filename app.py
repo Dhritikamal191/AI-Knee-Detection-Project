@@ -1,3 +1,4 @@
+import textwrap
 from pathlib import Path
 from typing import Any
 import inspect
@@ -2598,7 +2599,7 @@ elif page == "System":
 # ============================================================
 
 st.markdown(
-    """
+    textwrap.dedent("""
     <div class="project-footer">
 
         <div class="project-title">
@@ -2629,6 +2630,6 @@ st.markdown(
         </div>
 
     </div>
-    """,
+    """),
     unsafe_allow_html=True
 )
