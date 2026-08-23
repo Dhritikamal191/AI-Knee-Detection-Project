@@ -2,7 +2,7 @@ import io
 import json
 import tempfile
 from pathlib import Path
-
+from textwrap import dedent
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -32,75 +32,166 @@ st.markdown(
     """
     <style>
 
-    /* --------------------------------------------------------
+    /* ========================================================
        GLOBAL
-    -------------------------------------------------------- */
+    ======================================================== */
 
     .stApp {
         background:
             radial-gradient(
-                circle at 10% 0%,
-                rgba(99, 102, 241, 0.10),
+                circle at 8% 0%,
+                rgba(99, 102, 241, 0.12),
                 transparent 28%
             ),
             radial-gradient(
-                circle at 90% 10%,
-                rgba(59, 130, 246, 0.08),
+                circle at 92% 8%,
+                rgba(59, 130, 246, 0.09),
                 transparent 25%
             ),
-            #08090d;
+            linear-gradient(
+                180deg,
+                #08090d 0%,
+                #090a0f 55%,
+                #08090d 100%
+            );
+
+        color: #f4f4f5;
     }
+
 
     .block-container {
-        max-width: 1400px;
+        max-width: 1420px;
+
         padding-top: 2rem;
-        padding-bottom: 4rem;
+        padding-bottom: 5rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
     }
 
-    /* --------------------------------------------------------
+
+    /* Remove unnecessary Streamlit spacing */
+
+    div[data-testid="stVerticalBlock"] {
+        gap: 0.8rem;
+    }
+
+
+    /* ========================================================
+       TYPOGRAPHY
+       ======================================================== */
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        color: #f4f4f5 !important;
+
+        letter-spacing: -0.035em;
+    }
+
+
+    h1 {
+        font-weight: 850 !important;
+    }
+
+
+    h2 {
+        font-weight: 800 !important;
+    }
+
+
+    h3 {
+        font-weight: 750 !important;
+    }
+
+
+    p {
+        color: #a1a5b0;
+    }
+
+
+    /* ========================================================
        SIDEBAR
-    -------------------------------------------------------- */
+       ======================================================== */
 
     section[data-testid="stSidebar"] {
+
         background:
             linear-gradient(
                 180deg,
                 #0b0d13 0%,
-                #090a0e 100%
+                #090a0f 50%,
+                #08090d 100%
             );
 
         border-right:
             1px solid rgba(255,255,255,0.07);
     }
 
+
+    section[data-testid="stSidebar"] > div {
+        padding-top: 2rem;
+    }
+
+
     section[data-testid="stSidebar"] * {
         color: #d7d9e0;
     }
 
-    /* --------------------------------------------------------
-       HEADINGS
-    -------------------------------------------------------- */
 
-    h1, h2, h3 {
-        letter-spacing: -0.035em;
+    /* Sidebar radio */
+
+    section[data-testid="stSidebar"]
+    div[role="radiogroup"] {
+
+        gap: 4px;
     }
 
-    h1 {
-        font-weight: 800 !important;
+
+    section[data-testid="stSidebar"]
+    div[role="radiogroup"] label {
+
+        border-radius: 10px;
+
+        padding: 7px 10px;
+
+        transition:
+            background 0.2s ease,
+            transform 0.2s ease;
     }
 
-    /* --------------------------------------------------------
+
+    section[data-testid="stSidebar"]
+    div[role="radiogroup"] label:hover {
+
+        background:
+            rgba(255,255,255,0.045);
+    }
+
+
+    /* ========================================================
        HERO
-    -------------------------------------------------------- */
+       ======================================================== */
 
     .hero {
-        padding: 32px 0 30px;
+
+        padding:
+            25px
+            0
+            35px
+            0;
     }
 
-    .hero-badge {
-        display: inline-block;
 
-        padding: 7px 13px;
+    .hero-badge {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        padding:
+            7px
+            13px;
 
         border-radius: 999px;
 
@@ -108,338 +199,1131 @@ st.markdown(
             rgba(99,102,241,0.10);
 
         border:
-            1px solid rgba(129,140,248,0.20);
+            1px solid
+            rgba(129,140,248,0.22);
 
-        color: #a5b4fc;
+        color:
+            #a5b4fc;
 
-        font-size: 12px;
+        font-size:
+            11px;
 
-        font-weight: 700;
+        font-weight:
+            750;
 
-        letter-spacing: 0.08em;
+        letter-spacing:
+            0.10em;
 
-        text-transform: uppercase;
+        text-transform:
+            uppercase;
+
+        box-shadow:
+            0 0 25px
+            rgba(99,102,241,0.06);
     }
 
+
     .hero-title {
-        margin-top: 18px;
 
-        font-size: clamp(42px, 6vw, 72px);
+        margin-top:
+            18px;
 
-        line-height: 0.98;
+        max-width:
+            1000px;
 
-        font-weight: 850;
+        font-size:
+            clamp(42px, 6vw, 76px);
 
-        letter-spacing: -0.055em;
+        line-height:
+            0.98;
+
+        font-weight:
+            900;
+
+        letter-spacing:
+            -0.06em;
 
         background:
             linear-gradient(
                 100deg,
-                #ffffff 10%,
-                #a5b4fc 50%,
-                #60a5fa 90%
+                #ffffff 8%,
+                #c7d2fe 46%,
+                #93c5fd 85%
             );
 
-        -webkit-background-clip: text;
-        background-clip: text;
+        -webkit-background-clip:
+            text;
 
-        -webkit-text-fill-color: transparent;
+        background-clip:
+            text;
+
+        -webkit-text-fill-color:
+            transparent;
     }
+
 
     .hero-subtitle {
-        max-width: 850px;
 
-        margin-top: 20px;
+        max-width:
+            850px;
 
-        color: #9297a5;
+        margin-top:
+            22px;
 
-        font-size: 17px;
+        color:
+            #9297a5;
 
-        line-height: 1.8;
+        font-size:
+            16px;
+
+        line-height:
+            1.85;
     }
 
-    /* --------------------------------------------------------
-       CARDS
-    -------------------------------------------------------- */
+
+    /* ========================================================
+       SECTION HEADERS
+       ======================================================== */
+
+    .section-title {
+
+        margin-top:
+            42px;
+
+        margin-bottom:
+            12px;
+
+        font-size:
+            28px;
+
+        line-height:
+            1.2;
+
+        font-weight:
+            800;
+
+        letter-spacing:
+            -0.04em;
+
+        color:
+            #f4f4f5;
+    }
+
+
+    .section-description {
+
+        max-width:
+            850px;
+
+        color:
+            #858a97;
+
+        line-height:
+            1.8;
+
+        margin-bottom:
+            24px;
+    }
+
+
+    /* ========================================================
+       GENERAL GLASS CARDS
+       ======================================================== */
 
     .glass-card {
-        padding: 24px;
 
-        border-radius: 18px;
+        padding:
+            24px;
+
+        height:
+            100%;
+
+        box-sizing:
+            border-box;
+
+        border-radius:
+            18px;
 
         background:
             linear-gradient(
                 145deg,
-                rgba(255,255,255,0.045),
-                rgba(255,255,255,0.015)
+                rgba(255,255,255,0.050),
+                rgba(255,255,255,0.014)
             );
 
         border:
-            1px solid rgba(255,255,255,0.08);
+            1px solid
+            rgba(255,255,255,0.075);
 
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.025);
+            inset 0 1px 0
+            rgba(255,255,255,0.025),
+            0 10px 35px
+            rgba(0,0,0,0.10);
+
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            background 0.2s ease;
     }
 
-    .card-label {
-        color: #737987;
 
-        font-size: 11px;
+    .glass-card:hover {
 
-        font-weight: 700;
+        transform:
+            translateY(-2px);
 
-        letter-spacing: 0.12em;
-
-        text-transform: uppercase;
-
-        margin-bottom: 8px;
-    }
-
-    .card-value {
-        color: #f1f2f5;
-
-        font-size: 28px;
-
-        font-weight: 800;
-
-        letter-spacing: -0.035em;
-    }
-
-    .card-description {
-        color: #777c89;
-
-        font-size: 12px;
-
-        margin-top: 5px;
-    }
-
-    /* --------------------------------------------------------
-       METRIC CARDS
-    -------------------------------------------------------- */
-
-    .metric-card {
-        padding: 22px;
-
-        min-height: 135px;
-
-        border-radius: 18px;
+        border-color:
+            rgba(129,140,248,0.20);
 
         background:
             linear-gradient(
                 145deg,
-                rgba(99,102,241,0.09),
-                rgba(255,255,255,0.02)
+                rgba(255,255,255,0.060),
+                rgba(255,255,255,0.020)
+            );
+    }
+
+
+    .card-label {
+
+        color:
+            #737987;
+
+        font-size:
+            10px;
+
+        font-weight:
+            750;
+
+        letter-spacing:
+            0.13em;
+
+        text-transform:
+            uppercase;
+
+        margin-bottom:
+            8px;
+    }
+
+
+    .card-value {
+
+        color:
+            #f1f2f5;
+
+        font-size:
+            28px;
+
+        line-height:
+            1.15;
+
+        font-weight:
+            800;
+
+        letter-spacing:
+            -0.035em;
+    }
+
+
+    .card-description {
+
+        color:
+            #777c89;
+
+        font-size:
+            12px;
+
+        line-height:
+            1.55;
+
+        margin-top:
+            7px;
+    }
+
+
+    /* ========================================================
+       KPI / METRIC CARDS
+       ======================================================== */
+
+    .metric-card {
+
+        padding:
+            22px;
+
+        min-height:
+            120px;
+
+        height:
+            100%;
+
+        box-sizing:
+            border-box;
+
+        display:
+            flex;
+
+        flex-direction:
+            column;
+
+        justify-content:
+            center;
+
+        border-radius:
+            18px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(99,102,241,0.095),
+                rgba(255,255,255,0.018)
             );
 
         border:
-            1px solid rgba(255,255,255,0.08);
+            1px solid
+            rgba(255,255,255,0.08);
+
+        box-shadow:
+            inset 0 1px 0
+            rgba(255,255,255,0.025),
+            0 12px 30px
+            rgba(0,0,0,0.10);
+
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease;
     }
+
+
+    .metric-card:hover {
+
+        transform:
+            translateY(-3px);
+
+        border-color:
+            rgba(129,140,248,0.25);
+    }
+
 
     .metric-number {
-        font-size: 34px;
 
-        font-weight: 850;
+        font-size:
+            32px;
 
-        letter-spacing: -0.045em;
+        line-height:
+            1.1;
 
-        color: #f4f4f5;
+        font-weight:
+            850;
+
+        letter-spacing:
+            -0.045em;
+
+        color:
+            #f4f4f5;
+
+        white-space:
+            nowrap;
     }
+
 
     .metric-label {
-        color: #858a98;
 
-        font-size: 11px;
+        margin-top:
+            8px;
 
-        text-transform: uppercase;
+        color:
+            #858a98;
 
-        letter-spacing: 0.09em;
+        font-size:
+            10px;
+
+        line-height:
+            1.5;
+
+        font-weight:
+            700;
+
+        text-transform:
+            uppercase;
+
+        letter-spacing:
+            0.09em;
     }
 
-    /* --------------------------------------------------------
-       PREDICTION
-    -------------------------------------------------------- */
+
+    /* ========================================================
+       PREDICTION CARD
+       ======================================================== */
 
     .prediction-card {
-        padding: 30px;
 
-        border-radius: 22px;
+        padding:
+            30px;
+
+        min-height:
+            230px;
+
+        border-radius:
+            22px;
 
         background:
+            radial-gradient(
+                circle at 90% 10%,
+                rgba(99,102,241,0.13),
+                transparent 40%
+            ),
             linear-gradient(
                 145deg,
-                rgba(99,102,241,0.12),
+                rgba(99,102,241,0.11),
                 rgba(255,255,255,0.025)
             );
 
         border:
-            1px solid rgba(129,140,248,0.20);
+            1px solid
+            rgba(129,140,248,0.22);
+
+        box-shadow:
+            inset 0 1px 0
+            rgba(255,255,255,0.035),
+            0 20px 50px
+            rgba(0,0,0,0.15);
     }
+
 
     .prediction-grade {
-        font-size: 64px;
 
-        line-height: 1;
+        margin:
+            8px
+            0
+            10px
+            0;
 
-        font-weight: 900;
+        font-size:
+            clamp(48px, 6vw, 68px);
 
-        letter-spacing: -0.06em;
+        line-height:
+            1;
 
-        margin: 8px 0;
-    }
+        font-weight:
+            900;
 
-    .prediction-confidence {
-        color: #a1a5b0;
-
-        font-size: 15px;
-    }
-
-    /* --------------------------------------------------------
-       PROBABILITY
-    -------------------------------------------------------- */
-
-    .probability-row {
-        margin-bottom: 16px;
-    }
-
-    .probability-header {
-        display: flex;
-
-        justify-content: space-between;
-
-        margin-bottom: 6px;
-
-        font-size: 13px;
-    }
-
-    .probability-label {
-        color: #a4a8b2;
-    }
-
-    .probability-value {
-        color: #f1f1f3;
-
-        font-weight: 650;
-    }
-
-    .probability-track {
-        height: 7px;
-
-        overflow: hidden;
-
-        border-radius: 999px;
+        letter-spacing:
+            -0.065em;
 
         background:
-            rgba(255,255,255,0.07);
+            linear-gradient(
+                100deg,
+                #ffffff,
+                #a5b4fc,
+                #93c5fd
+            );
+
+        -webkit-background-clip:
+            text;
+
+        background-clip:
+            text;
+
+        -webkit-text-fill-color:
+            transparent;
     }
 
-    .probability-fill {
-        height: 100%;
 
-        border-radius: inherit;
+    .prediction-confidence {
+
+        color:
+            #a1a5b0;
+
+        font-size:
+            15px;
+
+        font-weight:
+            600;
+    }
+
+
+    /* ========================================================
+       PROBABILITY DISTRIBUTION
+       ======================================================== */
+
+    .probability-row {
+
+        margin-bottom:
+            17px;
+    }
+
+
+    .probability-header {
+
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            space-between;
+
+        margin-bottom:
+            7px;
+
+        font-size:
+            13px;
+    }
+
+
+    .probability-label {
+
+        color:
+            #a4a8b2;
+
+        font-weight:
+            550;
+    }
+
+
+    .probability-value {
+
+        color:
+            #f1f1f3;
+
+        font-weight:
+            700;
+    }
+
+
+    .probability-track {
+
+        width:
+            100%;
+
+        height:
+            8px;
+
+        overflow:
+            hidden;
+
+        border-radius:
+            999px;
+
+        background:
+            rgba(255,255,255,0.065);
+
+        box-shadow:
+            inset 0 1px 2px
+            rgba(0,0,0,0.20);
+    }
+
+
+    .probability-fill {
+
+        height:
+            100%;
+
+        border-radius:
+            inherit;
 
         background:
             linear-gradient(
                 90deg,
                 #6366f1,
+                #818cf8,
                 #60a5fa
             );
+
+        box-shadow:
+            0 0 12px
+            rgba(99,102,241,0.18);
+
+        transition:
+            width 0.5s ease;
     }
 
-    /* --------------------------------------------------------
-       SECTION
-    -------------------------------------------------------- */
 
-    .section-title {
-        margin-top: 45px;
+    /* ========================================================
+       UPLOADED IMAGE
+       ======================================================== */
 
-        margin-bottom: 20px;
+    .xray-card {
 
-        font-size: 26px;
+        padding:
+            14px;
 
-        font-weight: 800;
-    }
-
-    .section-description {
-        color: #858a97;
-
-        line-height: 1.75;
-
-        margin-bottom: 20px;
-    }
-
-    /* --------------------------------------------------------
-       FOOTER
-    -------------------------------------------------------- */
-
-    .footer {
-        margin-top: 70px;
-
-        padding-top: 25px;
-
-        border-top:
-            1px solid rgba(255,255,255,0.07);
-
-        text-align: center;
-
-        color: #626775;
-
-        font-size: 12px;
-    }
-
-    /* --------------------------------------------------------
-       UPLOADER
-    -------------------------------------------------------- */
-
-    [data-testid="stFileUploader"] {
-        border-radius: 18px;
-    }
-
-    /* --------------------------------------------------------
-       BUTTON
-    -------------------------------------------------------- */
-
-    .stButton > button {
-        border-radius: 10px;
-
-        border:
-            1px solid rgba(255,255,255,0.10);
+        border-radius:
+            20px;
 
         background:
-            rgba(255,255,255,0.04);
+            rgba(255,255,255,0.025);
 
-        color: #e5e7eb;
+        border:
+            1px solid
+            rgba(255,255,255,0.08);
 
-        font-weight: 650;
+        box-shadow:
+            0 15px 40px
+            rgba(0,0,0,0.15);
     }
+
+
+    /* ========================================================
+       FILE UPLOADER
+       ======================================================== */
+
+    [data-testid="stFileUploader"] {
+
+        padding:
+            8px;
+
+        border-radius:
+            18px;
+
+        background:
+            rgba(255,255,255,0.018);
+
+        border:
+            1px dashed
+            rgba(255,255,255,0.12);
+
+        transition:
+            border-color 0.2s ease,
+            background 0.2s ease;
+    }
+
+
+    [data-testid="stFileUploader"]:hover {
+
+        border-color:
+            rgba(129,140,248,0.35);
+
+        background:
+            rgba(99,102,241,0.025);
+    }
+
+
+    [data-testid="stFileUploaderDropzone"] {
+
+        background:
+            transparent;
+    }
+
+
+    /* ========================================================
+       BUTTONS
+       ======================================================== */
+
+    .stButton > button {
+
+        min-height:
+            44px;
+
+        padding:
+            0
+            18px;
+
+        border-radius:
+            11px;
+
+        border:
+            1px solid
+            rgba(129,140,248,0.22);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(99,102,241,0.18),
+                rgba(59,130,246,0.10)
+            );
+
+        color:
+            #eef0ff;
+
+        font-size:
+            14px;
+
+        font-weight:
+            700;
+
+        box-shadow:
+            0 8px 25px
+            rgba(0,0,0,0.12);
+
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            background 0.2s ease;
+    }
+
 
     .stButton > button:hover {
-        border-color:
-            rgba(129,140,248,0.45);
 
-        color: #ffffff;
+        transform:
+            translateY(-1px);
+
+        border-color:
+            rgba(129,140,248,0.50);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(99,102,241,0.28),
+                rgba(59,130,246,0.16)
+            );
+
+        color:
+            #ffffff;
     }
 
-    /* --------------------------------------------------------
+
+    .stButton > button:active {
+
+        transform:
+            translateY(0);
+    }
+
+
+    /* ========================================================
+       SELECT / RADIO / INPUTS
+       ======================================================== */
+
+    div[data-baseweb="select"] > div {
+
+        background:
+            rgba(255,255,255,0.025);
+
+        border-color:
+            rgba(255,255,255,0.10);
+
+        border-radius:
+            10px;
+    }
+
+
+    div[data-baseweb="select"] > div:hover {
+
+        border-color:
+            rgba(129,140,248,0.35);
+    }
+
+
+    /* ========================================================
+       DATAFRAME / TABLE
+       ======================================================== */
+
+    [data-testid="stDataFrame"] {
+
+        border:
+            1px solid
+            rgba(255,255,255,0.08);
+
+        border-radius:
+            14px;
+
+        overflow:
+            hidden;
+    }
+
+
+    /* ========================================================
+       ALERTS
+       ======================================================== */
+
+    div[data-testid="stAlert"] {
+
+        border-radius:
+            12px;
+
+        border:
+            1px solid
+            rgba(255,255,255,0.08);
+
+        background:
+            rgba(255,255,255,0.025);
+    }
+
+
+    /* ========================================================
+       METRIC / THRESHOLD GRID
+       ======================================================== */
+
+    .threshold-card {
+
+        padding:
+            20px;
+
+        min-height:
+            105px;
+
+        border-radius:
+            16px;
+
+        background:
+            rgba(255,255,255,0.025);
+
+        border:
+            1px solid
+            rgba(255,255,255,0.075);
+    }
+
+
+    /* ========================================================
+       CODE BLOCKS
+       ======================================================== */
+
+    pre {
+
+        border-radius:
+            12px !important;
+
+        border:
+            1px solid
+            rgba(255,255,255,0.08) !important;
+    }
+
+
+    /* ========================================================
+       EXPANDERS
+       ======================================================== */
+
+    details {
+
+        border-radius:
+            12px !important;
+
+        border-color:
+            rgba(255,255,255,0.08) !important;
+    }
+
+
+    /* ========================================================
+       DIVIDERS
+       ======================================================== */
+
+    hr {
+
+        border-color:
+            rgba(255,255,255,0.07) !important;
+
+        margin:
+            28px
+            0;
+    }
+
+
+    /* ========================================================
+       FOOTER
+       ======================================================== */
+
+    .footer {
+
+        margin-top:
+            75px;
+
+        padding-top:
+            28px;
+
+        padding-bottom:
+            10px;
+
+        border-top:
+            1px solid
+            rgba(255,255,255,0.07);
+
+        text-align:
+            center;
+
+        color:
+            #626775;
+
+        font-size:
+            11px;
+
+        line-height:
+            1.7;
+    }
+
+
+    /* ========================================================
+       GRAD-CAM VISUALIZATION
+       ======================================================== */
+
+    .explainability-card {
+
+        padding:
+            16px;
+
+        border-radius:
+            18px;
+
+        background:
+            rgba(255,255,255,0.025);
+
+        border:
+            1px solid
+            rgba(255,255,255,0.08);
+
+        box-shadow:
+            0 12px 35px
+            rgba(0,0,0,0.12);
+    }
+
+
+    .explainability-title {
+
+        margin-bottom:
+            10px;
+
+        color:
+            #d7d9e0;
+
+        font-size:
+            13px;
+
+        font-weight:
+            700;
+
+        text-align:
+            center;
+    }
+
+
+    /* ========================================================
+       STATUS INDICATORS
+       ======================================================== */
+
+    .status-online {
+
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        gap:
+            7px;
+
+        color:
+            #a7f3d0;
+
+        font-size:
+            12px;
+
+        font-weight:
+            650;
+    }
+
+
+    .status-dot {
+
+        width:
+            7px;
+
+        height:
+            7px;
+
+        border-radius:
+            50%;
+
+        background:
+            #34d399;
+
+        box-shadow:
+            0 0 10px
+            rgba(52,211,153,0.55);
+    }
+
+
+    /* ========================================================
        MOBILE
-    -------------------------------------------------------- */
+       ======================================================== */
+
+    @media (max-width: 1100px) {
+
+        .block-container {
+
+            padding-left:
+                2rem;
+
+            padding-right:
+                2rem;
+        }
+
+        .metric-number {
+
+            font-size:
+                28px;
+        }
+
+        .metric-label {
+
+            font-size:
+                9px;
+        }
+    }
+
 
     @media (max-width: 768px) {
 
-        .hero-title {
-            font-size: 46px;
+        .block-container {
+
+            padding-left:
+                1rem;
+
+            padding-right:
+                1rem;
+
+            padding-top:
+                1rem;
         }
+
+
+        .hero {
+
+            padding-top:
+                15px;
+
+            padding-bottom:
+                25px;
+        }
+
+
+        .hero-title {
+
+            font-size:
+                46px;
+
+            line-height:
+                1.0;
+        }
+
+
+        .hero-subtitle {
+
+            font-size:
+                14px;
+
+            line-height:
+                1.7;
+        }
+
+
+        .metric-card {
+
+            min-height:
+                105px;
+
+            padding:
+                17px;
+        }
+
+
+        .metric-number {
+
+            font-size:
+                25px;
+        }
+
+
+        .prediction-card {
+
+            padding:
+                24px;
+        }
+
 
         .prediction-grade {
-            font-size: 52px;
+
+            font-size:
+                50px;
         }
 
+
+        .section-title {
+
+            font-size:
+                24px;
+        }
     }
+
+
+    @media (max-width: 500px) {
+
+        .hero-title {
+
+            font-size:
+                38px;
+        }
+
+
+        .hero-badge {
+
+            font-size:
+                9px;
+
+            letter-spacing:
+                0.07em;
+        }
+
+
+        .metric-number {
+
+            font-size:
+                22px;
+        }
+
+
+        .metric-label {
+
+            font-size:
+                8px;
+        }
+
+
+        .card-value {
+
+            font-size:
+                24px;
+        }
+    }
+
+
+    /* ========================================================
+       STREAMLIT UI CLEANUP
+       ======================================================== */
+
+    #MainMenu {
+        visibility:
+            hidden;
+    }
+
+
+    footer {
+        visibility:
+            hidden;
+    }
+
+
+    header[data-testid="stHeader"] {
+
+        background:
+            transparent;
+    }
+
+
+    /* Prevent accidental horizontal overflow */
+
+    .main,
+    .block-container {
+
+        overflow-x:
+            hidden;
+    }
+
 
     </style>
     """,
     unsafe_allow_html=True,
 )
-
 
 # ============================================================
 # CONSTANTS
