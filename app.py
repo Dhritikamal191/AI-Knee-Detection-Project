@@ -1795,9 +1795,9 @@ if page == "Prediction":
 
                for i, probability in enumerate(probabilities):
 
-               with cols[i]:
+                   with cols[i]:
 
-                    st.metric(
+                        st.metric(
                 GRADE_NAMES[i],
                 f"{probability:.2f}%"
                 )
