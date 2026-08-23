@@ -2599,37 +2599,35 @@ elif page == "System":
 # ============================================================
 
 st.markdown(
-    textwrap.dedent("""
-    <div class="project-footer">
+    """
+<div class="project-footer">
 
-        <div class="project-title">
-            AI Knee Osteoarthritis Detection
-        </div>
-
-        <div class="project-subtitle">
-            Ordinal ResNet50 &nbsp;•&nbsp;
-            Experiment 5 &nbsp;•&nbsp;
-            Explainable AI
-        </div>
-
-        <div class="project-divider"></div>
-
-        <div class="project-description">
-            Research-oriented AI system for grading knee osteoarthritis
-            severity from X-ray images using ordinal deep learning and
-            Grad-CAM-based visual explanations.
-        </div>
-
-        <div class="project-badge">
-            Research / Educational Prototype
-        </div>
-
-        <div class="project-disclaimer">
-            Model predictions are intended for research and educational
-            purposes and should not be used as an independent medical diagnosis.
-        </div>
-
+    <div class="project-title">
+        AI Knee Osteoarthritis Detection
     </div>
-    """),
+
+    <div class="project-subtitle">
+        Ordinal ResNet50 &nbsp;•&nbsp; Experiment 5 &nbsp;•&nbsp; Explainable AI
+    </div>
+
+    <div class="project-divider"></div>
+
+    <div class="project-description">
+        Research-oriented AI system for grading knee osteoarthritis
+        severity from X-ray images using ordinal deep learning and
+        Grad-CAM-based visual explanations.
+    </div>
+
+    <div class="project-badge">
+        Research / Educational Prototype
+    </div>
+
+    <div class="project-disclaimer">
+        Model predictions are intended for research and educational
+        purposes and should not be used as an independent medical diagnosis.
+    </div>
+
+</div>
+""",
     unsafe_allow_html=True
 )
