@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from PIL import Image
-
+import plotly.express as px
 from src.inference.predict import predict
 from src.utils.config import get_model_config
 
