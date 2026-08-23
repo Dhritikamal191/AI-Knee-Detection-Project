@@ -1,15 +1,16 @@
-import io
+from pathlib import Path
+from typing import Any
 import json
 import tempfile
-from pathlib import Path
-from textwrap import dedent
+import inspect
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 from PIL import Image
 
 from src.inference.predict import predict
-from src.explainability.gradcam import generate_gradcam
+from src.utils.config import get_model_config
 
 
 # ============================================================
@@ -25,12 +26,7 @@ st.set_page_config(
 
 
 # ============================================================
-# CUSTOM CSS
-# ============================================================
-
-
-# ============================================================
-# CONSTANTS
+# GLOBAL CONFIG
 # ============================================================
 
 GRADE_NAMES = [
@@ -44,155 +40,740 @@ GRADE_NAMES = [
 GRADE_DESCRIPTIONS = {
     0: "No radiographic evidence of osteoarthritis",
     1: "Doubtful / early osteoarthritic changes",
-    2: "Mild to moderate osteoarthritis",
-    3: "Moderate to severe osteoarthritis",
+    2: "Mild osteoarthritis",
+    3: "Moderate osteoarthritis",
     4: "Severe osteoarthritis",
 }
+
+MODEL_SHA256 = (
+    "f2200b43966dce1498e47ad6ee45cb35e5cec831246b7667323e16fd9d7e1667"
+)
+
+
+# ============================================================
+# LOAD MODEL CONFIG
+# ============================================================
+
+try:
+    MODEL_CONFIG = get_model_config()
+except Exception:
+    MODEL_CONFIG = {}
+
+
+MODEL_INFO = MODEL_CONFIG.get("model", {})
+PERFORMANCE = MODEL_CONFIG.get("performance", {})
+
+
+MODEL_NAME = MODEL_INFO.get(
+    "name",
+    "ordinal_resnet50",
+)
+
+MODEL_ARCHITECTURE = MODEL_INFO.get(
+    "architecture",
+    "OrdinalResNet50",
+)
+
+MODEL_EXPERIMENT = MODEL_INFO.get(
+    "experiment",
+    "experiment5",
+)
+
+MODEL_REPOSITORY = (
+    MODEL_INFO
+    .get("repository", {})
+    .get(
+        "repo_id",
+        "dhriti191/ai-knee-detection-resnet50",
+    )
+)
+
+IMAGE_SIZE = (
+    MODEL_INFO
+    .get("input", {})
+    .get(
+        "image_size",
+        224,
+    )
+)
+
+
+# ============================================================
+# CUSTOM CSS
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+
+    /* ======================================================
+       GLOBAL
+       ====================================================== */
+
+    .stApp {
+        background:
+            radial-gradient(
+                circle at 5% 0%,
+                rgba(99, 102, 241, 0.10),
+                transparent 30%
+            ),
+            radial-gradient(
+                circle at 95% 5%,
+                rgba(59, 130, 246, 0.08),
+                transparent 28%
+            ),
+            #08090d;
+    }
+
+    .block-container {
+        max-width: 1450px;
+        padding-top: 2rem;
+        padding-bottom: 4rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+
+    /* ======================================================
+       TYPOGRAPHY
+       ====================================================== */
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        letter-spacing: -0.035em !important;
+    }
+
+    h1 {
+        font-weight: 850 !important;
+    }
+
+    h2 {
+        font-weight: 800 !important;
+    }
+
+    h3 {
+        font-weight: 750 !important;
+    }
+
+    /* ======================================================
+       SIDEBAR
+       ====================================================== */
+
+    section[data-testid="stSidebar"] {
+        background:
+            linear-gradient(
+                180deg,
+                #0b0d13 0%,
+                #090a0e 100%
+            );
+
+        border-right:
+            1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: #d7d9e0;
+    }
+
+    /* ======================================================
+       NATIVE METRIC CARDS
+       ====================================================== */
+
+    div[data-testid="stMetric"] {
+        background:
+            linear-gradient(
+                145deg,
+                rgba(99, 102, 241, 0.09),
+                rgba(255, 255, 255, 0.02)
+            );
+
+        border:
+            1px solid rgba(255, 255, 255, 0.08);
+
+        border-radius: 18px;
+
+        padding: 20px;
+
+        min-height: 125px;
+
+        box-shadow:
+            0 12px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    div[data-testid="stMetric"]:hover {
+        border-color:
+            rgba(129, 140, 248, 0.28);
+    }
+
+    div[data-testid="stMetricLabel"] {
+        color: #858a98 !important;
+        font-size: 0.75rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        color: #f4f4f5 !important;
+        font-weight: 800 !important;
+    }
+
+    /* ======================================================
+       FILE UPLOADER
+       ====================================================== */
+
+    [data-testid="stFileUploader"] {
+        background:
+            rgba(255, 255, 255, 0.018);
+
+        border:
+            1px dashed rgba(255, 255, 255, 0.13);
+
+        border-radius: 18px;
+
+        padding: 8px;
+    }
+
+    [data-testid="stFileUploader"]:hover {
+        border-color:
+            rgba(129, 140, 248, 0.40);
+    }
+
+    /* ======================================================
+       BUTTONS
+       ====================================================== */
+
+    .stButton > button {
+        border-radius: 11px;
+
+        min-height: 44px;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(99, 102, 241, 0.18),
+                rgba(59, 130, 246, 0.10)
+            );
+
+        border:
+            1px solid rgba(129, 140, 248, 0.25);
+
+        color: #eef0ff;
+
+        font-weight: 700;
+
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            background 0.2s ease;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-1px);
+
+        border-color:
+            rgba(129, 140, 248, 0.55);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(99, 102, 241, 0.28),
+                rgba(59, 130, 246, 0.17)
+            );
+
+        color: white;
+    }
+
+    /* ======================================================
+       TABS
+       ====================================================== */
+
+    button[data-baseweb="tab"] {
+        font-weight: 650;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #a5b4fc;
+    }
+
+    /* ======================================================
+       DATAFRAME
+       ====================================================== */
+
+    [data-testid="stDataFrame"] {
+        border:
+            1px solid rgba(255, 255, 255, 0.08);
+
+        border-radius: 14px;
+
+        overflow: hidden;
+    }
+
+    /* ======================================================
+       ALERTS
+       ====================================================== */
+
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+    }
+
+    /* ======================================================
+       EXPANDERS
+       ====================================================== */
+
+    details {
+        border-radius: 14px !important;
+        border-color:
+            rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* ======================================================
+       CODE
+       ====================================================== */
+
+    pre {
+        border-radius: 12px !important;
+    }
+
+    /* ======================================================
+       FOOTER
+       ====================================================== */
+
+    .footer-line {
+        margin-top: 60px;
+        padding-top: 25px;
+        border-top:
+            1px solid rgba(255, 255, 255, 0.07);
+
+        text-align: center;
+
+        color: #626775;
+
+        font-size: 0.75rem;
+
+        line-height: 1.7;
+    }
+
+    /* ======================================================
+       STATUS
+       ====================================================== */
+
+    .status-box {
+        padding: 12px 15px;
+
+        border-radius: 12px;
+
+        background:
+            rgba(52, 211, 153, 0.06);
+
+        border:
+            1px solid rgba(52, 211, 153, 0.14);
+
+        color: #a7f3d0;
+
+        font-size: 0.82rem;
+    }
+
+    /* ======================================================
+       MOBILE
+       ====================================================== */
+
+    @media (max-width: 900px) {
+
+        .block-container {
+            padding-left: 1.2rem;
+            padding-right: 1.2rem;
+        }
+    }
+
+    @media (max-width: 600px) {
+
+        .block-container {
+            padding-top: 1rem;
+        }
+
+        div[data-testid="stMetric"] {
+            min-height: 105px;
+            padding: 15px;
+        }
+
+        div[data-testid="stMetricValue"] {
+            font-size: 1.4rem !important;
+        }
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # ============================================================
 # HELPER FUNCTIONS
 # ============================================================
 
-def get_result_value(result, key, default=None):
-    """Safely retrieve values from prediction result."""
+def get_value(
+    result: Any,
+    *keys,
+    default=None,
+):
+    """
+    Safely retrieve a value from either:
+    - dictionary
+    - object with attributes
+    """
+
+    if result is None:
+        return default
 
     if isinstance(result, dict):
-        return result.get(key, default)
 
-    return getattr(result, key, default)
+        for key in keys:
+
+            if key in result:
+                return result[key]
+
+    else:
+
+        for key in keys:
+
+            if hasattr(result, key):
+                return getattr(result, key)
+
+    return default
 
 
-def normalize_probabilities(result):
+def to_percentage(value):
     """
-    Extract class probabilities from the prediction result.
+    Convert probability to percentage.
 
-    Supports either:
-        class_probabilities
-        grade_probabilities
-        probabilities
+    Supports:
+        0.82 -> 82
+        82 -> 82
     """
 
-    probabilities = (
-        get_result_value(result, "class_probabilities")
-        or get_result_value(result, "grade_probabilities")
-        or get_result_value(result, "probabilities")
+    if value is None:
+        return 0.0
+
+    try:
+        value = float(value)
+    except Exception:
+        return 0.0
+
+    if 0 <= value <= 1:
+        return value * 100
+
+    return value
+
+
+def extract_grade(result):
+    """
+    Extract predicted grade from the prediction result.
+    """
+
+    value = get_value(
+        result,
+        "predicted_grade",
+        "prediction",
+        "grade",
+        "predicted_class",
+        "class_id",
+        default=0,
     )
 
-    if probabilities is None:
-        return None
-
-    if isinstance(probabilities, dict):
-
-        values = []
-
-        for grade in GRADE_NAMES:
-            value = probabilities.get(grade, 0)
-
-            values.append(float(value))
-
-        return values
-
-    return [float(x) for x in probabilities]
+    try:
+        return int(value)
+    except Exception:
+        return 0
 
 
-def get_threshold_probabilities(result):
-    """Extract ordinal threshold probabilities."""
+def extract_confidence(result):
+    """
+    Extract prediction confidence.
+    """
 
-    values = (
-        get_result_value(
-            result,
-            "ordinal_threshold_probabilities"
-        )
-        or get_result_value(
-            result,
-            "threshold_probabilities"
-        )
+    value = get_value(
+        result,
+        "confidence",
+        "prediction_confidence",
+        "max_probability",
+        default=0,
+    )
+
+    return to_percentage(value)
+
+
+def extract_probabilities(result):
+    """
+    Extract class probabilities.
+
+    Supports common result formats.
+    """
+
+    values = get_value(
+        result,
+        "class_probabilities",
+        "grade_probabilities",
+        "probabilities",
+        "probs",
+        default=None,
     )
 
     if values is None:
         return None
 
     if isinstance(values, dict):
-        return values
 
-    return {
-        f"Grade >= {i + 1}": float(value)
-        for i, value in enumerate(values)
-    }
+        probabilities = []
 
+        for grade in GRADE_NAMES:
 
-def probability_percent(value):
-    """Convert probability to percentage."""
+            value = (
+                values.get(grade)
+                or values.get(
+                    grade.replace(
+                        "Grade ",
+                        "",
+                    )
+                )
+                or 0
+            )
 
-    value = float(value)
+            probabilities.append(
+                to_percentage(value)
+            )
 
-    if value <= 1:
-        return value * 100
+        return probabilities
 
-    return value
+    try:
 
+        return [
+            to_percentage(value)
+            for value in values
+        ]
 
-def render_probability_bars(probabilities):
+    except Exception:
 
-    for grade, probability in zip(
-        GRADE_NAMES,
-        probabilities
-    ):
-
-        percent = probability_percent(probability)
-
-        percent = max(0, min(100, percent))
-
-        st.markdown(
-            f"""
-            <div class="probability-row">
-
-                <div class="probability-header">
-
-                    <span class="probability-label">
-                        {grade}
-                    </span>
-
-                    <span class="probability-value">
-                        {percent:.2f}%
-                    </span>
-
-                </div>
-
-                <div class="probability-track">
-
-                    <div
-                        class="probability-fill"
-                        style="width:{percent}%;">
-                    </div>
-
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        return None
 
 
-def save_uploaded_image(uploaded_file):
+def save_uploaded_file(uploaded_file):
+    """
+    Save uploaded image temporarily.
+    """
 
     suffix = Path(
         uploaded_file.name
-    ).suffix or ".png"
+    ).suffix.lower()
 
-    temp_file = tempfile.NamedTemporaryFile(
+    if suffix not in {
+        ".png",
+        ".jpg",
+        ".jpeg",
+    }:
+        suffix = ".png"
+
+    with tempfile.NamedTemporaryFile(
         delete=False,
-        suffix=suffix
+        suffix=suffix,
+    ) as tmp:
+
+        tmp.write(
+            uploaded_file.getbuffer()
+        )
+
+        return Path(tmp.name)
+
+
+def normalize_result_for_json(result):
+    """
+    Convert prediction result into a JSON-safe object.
+    """
+
+    if isinstance(result, dict):
+        return result
+
+    if hasattr(result, "__dict__"):
+        return result.__dict__
+
+    return str(result)
+
+
+# ============================================================
+# GRAD-CAM HELPERS
+# ============================================================
+
+def find_gradcam_function():
+    """
+    Import Grad-CAM function without making the entire app
+    fail if the implementation is unavailable.
+    """
+
+    try:
+
+        from src.explainability.gradcam import (
+            generate_gradcam,
+        )
+
+        return generate_gradcam
+
+    except Exception:
+
+        return None
+
+
+def run_gradcam(
+    image_path,
+    predicted_grade,
+):
+    """
+    Attempt to work with the existing Grad-CAM implementation.
+
+    The project has evolved through multiple Grad-CAM
+    implementations, so this function inspects the function
+    signature and passes the arguments it understands.
+    """
+
+    function = find_gradcam_function()
+
+    if function is None:
+        raise RuntimeError(
+            "Grad-CAM function could not be imported."
+        )
+
+    signature = inspect.signature(function)
+
+    parameters = signature.parameters
+
+    kwargs = {}
+
+    # Image parameter
+    for name in [
+        "image_path",
+        "img_path",
+        "file_path",
+        "path",
+        "image",
+    ]:
+
+        if name in parameters:
+
+            kwargs[name] = str(
+                image_path
+            )
+
+            break
+
+    # Grade / target parameter
+    for name in [
+        "predicted_grade",
+        "target_grade",
+        "grade",
+        "target_class",
+        "class_idx",
+    ]:
+
+        if name in parameters:
+
+            kwargs[name] = predicted_grade
+
+            break
+
+    # Output directory if supported
+    output_dir = (
+        Path("artifacts")
+        / "gradcam"
     )
 
-    temp_file.write(
-        uploaded_file.getbuffer()
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
-    temp_file.close()
+    for name in [
+        "output_dir",
+        "save_dir",
+        "out_dir",
+    ]:
 
-    return Path(temp_file.name)
+        if name in parameters:
+
+            kwargs[name] = str(
+                output_dir
+            )
+
+            break
+
+    # --------------------------------------------------------
+    # Call using keyword arguments if possible
+    # --------------------------------------------------------
+
+    if kwargs:
+
+        try:
+            return function(**kwargs)
+
+        except TypeError:
+            pass
+
+    # --------------------------------------------------------
+    # Fallback: image path as first positional argument
+    # --------------------------------------------------------
+
+    return function(
+        str(image_path)
+    )
+
+
+def find_image_files(value):
+    """
+    Recursively search a Grad-CAM result for generated images.
+    """
+
+    found = []
+
+    if value is None:
+        return found
+
+    if isinstance(
+        value,
+        (str, Path),
+    ):
+
+        path = Path(value)
+
+        if path.exists() and path.is_file():
+
+            if path.suffix.lower() in {
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".webp",
+            }:
+
+                found.append(path)
+
+        return found
+
+    if isinstance(value, dict):
+
+        for item in value.values():
+
+            found.extend(
+                find_image_files(item)
+            )
+
+        return found
+
+    if isinstance(value, (list, tuple)):
+
+        for item in value:
+
+            found.extend(
+                find_image_files(item)
+            )
+
+        return found
+
+    return found
 
 
 # ============================================================
@@ -202,76 +783,69 @@ def save_uploaded_image(uploaded_file):
 with st.sidebar:
 
     st.markdown(
-        """
-        <div style="
-            font-size:24px;
-            font-weight:850;
-            letter-spacing:-0.04em;
-            margin-bottom:4px;
-        ">
-            🦴 Knee AI
-        </div>
-
-        <div style="
-            color:#777c89;
-            font-size:12px;
-            margin-bottom:25px;
-        ">
-            Osteoarthritis Detection
-        </div>
-        """,
-        unsafe_allow_html=True,
+        "# 🦴 Knee AI"
     )
 
+    st.caption(
+        "Osteoarthritis Detection"
+    )
 
-    st.markdown("### Navigation")
+    st.divider()
+
+    st.markdown(
+        "### Navigation"
+    )
 
     page = st.radio(
-        "Navigate",
+        "Navigation",
         [
             "Prediction",
-            "Model",
+            "Model Performance",
             "Explainability",
             "System",
         ],
         label_visibility="collapsed",
     )
 
+    st.divider()
 
-    st.markdown("---")
-
-
-    st.markdown("### Model")
-
-    st.caption(
-        "Experiment 5 · Ordinal ResNet50"
+    st.markdown(
+        "### Model"
     )
 
     st.caption(
-        "5 severity grades"
+        f"Architecture: {MODEL_ARCHITECTURE}"
     )
 
     st.caption(
-        "224 × 224 RGB input"
+        f"Experiment: {MODEL_EXPERIMENT}"
     )
 
+    st.caption(
+        f"Input: {IMAGE_SIZE} × {IMAGE_SIZE}"
+    )
 
-    st.markdown("---")
+    st.caption(
+        "Output: 5 severity grades"
+    )
 
+    st.divider()
 
     st.markdown(
         """
-        <div style="
-            color:#626775;
-            font-size:11px;
-            line-height:1.6;
-        ">
-            Research / educational prototype.
-            Not intended for independent medical
-            diagnosis or treatment decisions.
+        <div class="status-box">
+            ● Model service available
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+    st.divider()
+
+    st.caption(
+        "Research / educational prototype. "
+        "Not intended for independent medical "
+        "diagnosis or treatment decisions."
     )
 
 
@@ -279,69 +853,69 @@ with st.sidebar:
 # HERO
 # ============================================================
 
-st.markdown(
-    """
-    <div class="hero">
-
-        <div class="hero-badge">
-            Computer Vision · Deep Learning · MLOps
-        </div>
-
-        <div class="hero-title">
-            AI Knee Osteoarthritis Detection
-        </div>
-
-        <div class="hero-subtitle">
-
-            Upload a knee X-ray and obtain an automated
-            osteoarthritis severity prediction using an
-            Ordinal ResNet50 model, with confidence scores,
-            probability distributions and explainable AI.
-
-        </div>
-
-    </div>
-    """,
-    unsafe_allow_html=True,
+st.title(
+    "AI Knee Osteoarthritis Detection"
 )
 
+st.write(
+    """
+    Automated knee X-ray severity assessment using an
+    **Ordinal ResNet50** deep-learning model with
+    probability estimation and Grad-CAM explainability.
+    """
+)
+
+st.divider()
+
 
 # ============================================================
-# TOP METRICS
+# KPI ROW
 # ============================================================
 
-metric_cols = st.columns(4)
+accuracy = PERFORMANCE.get(
+    "accuracy",
+    0.6093,
+)
 
-metrics = [
-    ("60.93%", "Accuracy"),
-    ("59.89%", "Macro F1"),
-    ("77.07%", "Quadratic Weighted Kappa"),
-    ("5", "Severity Grades"),
-]
+macro_f1 = PERFORMANCE.get(
+    "macro_f1",
+    0.5989,
+)
 
-for col, (value, label) in zip(
-    metric_cols,
-    metrics
-):
+qwk = PERFORMANCE.get(
+    "quadratic_weighted_kappa",
+    0.7707,
+)
 
-    with col:
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
+with kpi1:
 
-                <div class="metric-number">
-                    {value}
-                </div>
+    st.metric(
+        "Accuracy",
+        f"{float(accuracy) * 100:.2f}%",
+    )
 
-                <div class="metric-label">
-                    {label}
-                </div>
+with kpi2:
 
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.metric(
+        "Macro F1",
+        f"{float(macro_f1) * 100:.2f}%",
+    )
+
+with kpi3:
+
+    st.metric(
+        "Quadratic Weighted Kappa",
+        f"{float(qwk) * 100:.2f}%",
+    )
+
+with kpi4:
+
+    st.metric(
+        "Severity Grades",
+        "5",
+    )
 
 
 # ============================================================
@@ -350,24 +924,16 @@ for col, (value, label) in zip(
 
 if page == "Prediction":
 
-    st.markdown(
-        '<div class="section-title">Knee X-ray Analysis</div>',
-        unsafe_allow_html=True,
+    st.header(
+        "Knee X-ray Analysis"
     )
 
-    st.markdown(
+    st.write(
         """
-        <div class="section-description">
-
-            Upload a knee X-ray image. The model will preprocess
-            the image and return the predicted osteoarthritis
-            severity together with probability estimates.
-
-        </div>
-        """,
-        unsafe_allow_html=True,
+        Upload a knee X-ray image to obtain an automated
+        osteoarthritis severity prediction.
+        """
     )
-
 
     uploaded_file = st.file_uploader(
         "Upload knee X-ray",
@@ -376,64 +942,70 @@ if page == "Prediction":
             "jpg",
             "jpeg",
         ],
-        help="Upload a knee X-ray image for analysis.",
+        help=(
+            "Supported formats: PNG, JPG and JPEG."
+        ),
     )
-
 
     if uploaded_file is None:
 
         st.info(
-            "Upload a knee X-ray image to begin."
+            "Upload a knee X-ray image to begin analysis."
         )
 
-        st.markdown(
-            """
-            <div class="glass-card">
-
-                <div class="card-label">
-                    Supported workflow
-                </div>
-
-                <div style="
-                    font-size:18px;
-                    font-weight:700;
-                    margin-bottom:8px;
-                ">
-                    Image → Model → Severity → Explanation
-                </div>
-
-                <div style="
-                    color:#777c89;
-                    font-size:13px;
-                ">
-                    The application combines ordinal deep learning,
-                    probability estimation and Grad-CAM explainability.
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.subheader(
+            "How the system works"
         )
 
+        flow1, flow2, flow3, flow4 = st.columns(4)
+
+        with flow1:
+            st.markdown(
+                "### 01\nUpload"
+            )
+            st.caption(
+                "Provide a knee X-ray image."
+            )
+
+        with flow2:
+            st.markdown(
+                "### 02\nPreprocess"
+            )
+            st.caption(
+                "Resize and normalize the image."
+            )
+
+        with flow3:
+            st.markdown(
+                "### 03\nPredict"
+            )
+            st.caption(
+                "Ordinal ResNet50 predicts severity."
+            )
+
+        with flow4:
+            st.markdown(
+                "### 04\nExplain"
+            )
+            st.caption(
+                "Grad-CAM highlights model attention."
+            )
 
     else:
 
-        image = Image.open(uploaded_file).convert("RGB")
+        image = Image.open(
+            uploaded_file
+        ).convert("RGB")
 
-        image_col, info_col = st.columns(
-            [1.05, 0.95],
+        image_col, analysis_col = st.columns(
+            [1, 1],
             gap="large",
         )
 
-
-        # ----------------------------------------------------
-        # IMAGE
-        # ----------------------------------------------------
-
         with image_col:
 
-            st.markdown(
-                "### Uploaded X-ray"
+            st.subheader(
+                "Uploaded X-ray"
             )
 
             st.image(
@@ -446,32 +1018,37 @@ if page == "Prediction":
                 f"{image.width} × {image.height}px"
             )
 
+        with analysis_col:
 
-        # ----------------------------------------------------
-        # RUN INFERENCE
-        # ----------------------------------------------------
+            st.subheader(
+                "Run Analysis"
+            )
 
-        with info_col:
-
-            st.markdown(
-                "### Analysis"
+            st.write(
+                """
+                The uploaded image will be passed through
+                the same inference pipeline used by the
+                deployed application.
+                """
             )
 
             analyze = st.button(
-                "Run AI Analysis",
+                "Run AI Prediction",
                 width="stretch",
+                type="primary",
             )
-
 
             if analyze:
 
-                with st.spinner(
-                    "Running model inference..."
-                ):
-
-                    image_path = save_uploaded_image(
+                image_path = (
+                    save_uploaded_file(
                         uploaded_file
                     )
+                )
+
+                with st.spinner(
+                    "Running Ordinal ResNet50 inference..."
+                ):
 
                     try:
 
@@ -479,293 +1056,205 @@ if page == "Prediction":
                             image_path
                         )
 
+                        st.session_state[
+                            "prediction_result"
+                        ] = result
+
+                        st.session_state[
+                            "prediction_image"
+                        ] = str(
+                            image_path
+                        )
+
                     except Exception as exc:
 
                         st.error(
-                            f"Inference failed: {exc}"
+                            "Prediction failed."
                         )
 
-                        st.stop()
-
-
-                st.session_state[
-                    "prediction_result"
-                ] = result
-
-                st.session_state[
-                    "prediction_image"
-                ] = str(image_path)
-
-
-        # ----------------------------------------------------
-        # DISPLAY RESULT
-        # ----------------------------------------------------
+                        st.exception(
+                            exc
+                        )
 
         result = st.session_state.get(
             "prediction_result"
         )
 
-
         if result is not None:
 
-            predicted_grade = get_result_value(
-                result,
-                "predicted_grade",
-                get_result_value(
-                    result,
-                    "grade",
-                    0
-                ),
-            )
+            st.divider()
 
-            confidence = get_result_value(
-                result,
-                "confidence",
-                0
-            )
-
-
-            try:
-                predicted_grade = int(
-                    predicted_grade
-                )
-            except Exception:
-                predicted_grade = 0
-
-
-            confidence = probability_percent(
-                confidence
-            )
-
-
-            st.markdown(
-                "<br>",
-                unsafe_allow_html=True,
-            )
-
-
-            st.markdown(
-                f"""
-                <div class="prediction-card">
-
-                    <div class="card-label">
-                        Model Prediction
-                    </div>
-
-                    <div class="prediction-grade">
-                        Grade {predicted_grade}
-                    </div>
-
-                    <div class="prediction-confidence">
-                        Confidence · {confidence:.2f}%
-                    </div>
-
-                    <div style="
-                        margin-top:14px;
-                        color:#777c89;
-                        font-size:13px;
-                    ">
-                        {GRADE_DESCRIPTIONS.get(
-                            predicted_grade,
-                            "Severity classification"
-                        )}
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-
-            # ------------------------------------------------
-            # PROBABILITIES
-            # ------------------------------------------------
-
-            probabilities = normalize_probabilities(
+            predicted_grade = extract_grade(
                 result
             )
 
+            confidence = extract_confidence(
+                result
+            )
 
-            if probabilities:
+            st.header(
+                "Prediction Result"
+            )
+
+            result_col, probability_col = st.columns(
+                [0.8, 1.2],
+                gap="large",
+            )
+
+            with result_col:
+
+                st.success(
+                    f"Predicted severity: "
+                    f"**Grade {predicted_grade}**"
+                )
+
+                st.metric(
+                    "Confidence",
+                    f"{confidence:.2f}%",
+                )
 
                 st.markdown(
-                    "### Class Probability Distribution"
+                    f"**Clinical severity category**"
                 )
 
-                render_probability_bars(
-                    probabilities
+                st.write(
+                    GRADE_DESCRIPTIONS.get(
+                        predicted_grade,
+                        "Severity classification",
+                    )
                 )
 
+            with probability_col:
+
+                st.subheader(
+                    "Class Probability Distribution"
+                )
+
+                probabilities = (
+                    extract_probabilities(
+                        result
+                    )
+                )
+
+                if probabilities is not None:
+
+                    for grade, probability in zip(
+                        GRADE_NAMES,
+                        probabilities,
+                    ):
+
+                        label_col, value_col = st.columns(
+                            [4, 1]
+                        )
+
+                        with label_col:
+
+                            st.write(
+                                grade
+                            )
+
+                        with value_col:
+
+                            st.write(
+                                f"{probability:.2f}%"
+                            )
+
+                        st.progress(
+                            min(
+                                max(
+                                    probability / 100,
+                                    0,
+                                ),
+                                1,
+                            )
+                        )
+
+                else:
+
+                    st.warning(
+                        "Class probability information "
+                        "was not returned by the prediction pipeline."
+                    )
 
             # ------------------------------------------------
-            # THRESHOLDS
+            # RAW RESULT
             # ------------------------------------------------
 
-            threshold_probs = (
-                get_threshold_probabilities(
-                    result
-                )
+            with st.expander(
+                "View prediction details"
+            ):
+
+                try:
+
+                    st.json(
+                        normalize_result_for_json(
+                            result
+                        )
+                    )
+
+                except Exception:
+
+                    st.write(
+                        result
+                    )
+
+            # ------------------------------------------------
+            # QUICK NEXT STEP
+            # ------------------------------------------------
+
+            st.info(
+                "For an explanation of the model's visual "
+                "attention, open the **Explainability** section."
             )
 
 
-            if threshold_probs:
-
-                st.markdown(
-                    "### Ordinal Threshold Probabilities"
-                )
-
-                threshold_cols = st.columns(
-                    len(threshold_probs)
-                )
-
-
-                for col, (
-                    name,
-                    value
-                ) in zip(
-                    threshold_cols,
-                    threshold_probs.items()
-                ):
-
-                    with col:
-
-                        percent = probability_percent(
-                            value
-                        )
-
-                        st.markdown(
-                            f"""
-                            <div class="glass-card">
-
-                                <div class="card-label">
-                                    {name}
-                                </div>
-
-                                <div class="card-value">
-                                    {percent:.2f}%
-                                </div>
-
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-
-
 # ============================================================
-# MODEL PAGE
+# MODEL PERFORMANCE
 # ============================================================
 
-elif page == "Model":
+elif page == "Model Performance":
 
-    st.markdown(
-        '<div class="section-title">Model Overview</div>',
-        unsafe_allow_html=True,
+    st.header(
+        "Model Performance"
     )
 
-    st.markdown(
+    st.write(
         """
-        <div class="section-description">
-
-            Experiment 5 uses an Ordinal ResNet50 architecture.
-            The model predicts five ordered osteoarthritis severity
-            levels through four ordinal thresholds.
-
-        </div>
-        """,
-        unsafe_allow_html=True,
+        Performance reported for the deployed
+        **Experiment 5 Ordinal ResNet50** model.
+        """
     )
 
+    p1, p2, p3 = st.columns(3)
 
-    cols = st.columns(2)
+    with p1:
 
-
-    with cols[0]:
-
-        st.markdown(
-            """
-            <div class="glass-card">
-
-                <div class="card-label">
-                    Architecture
-                </div>
-
-                <div class="card-value">
-                    Ordinal ResNet50
-                </div>
-
-                <div class="card-description">
-                    Deep residual network with ordinal output formulation.
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.metric(
+            "Accuracy",
+            f"{float(accuracy) * 100:.2f}%",
         )
 
+    with p2:
 
-    with cols[1]:
-
-        st.markdown(
-            """
-            <div class="glass-card">
-
-                <div class="card-label">
-                    Input
-                </div>
-
-                <div class="card-value">
-                    224 × 224 RGB
-                </div>
-
-                <div class="card-description">
-                    Image preprocessing with ImageNet normalization.
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.metric(
+            "Macro F1",
+            f"{float(macro_f1) * 100:.2f}%",
         )
 
+    with p3:
 
-    st.markdown(
-        "### Severity Classes"
+        st.metric(
+            "Quadratic Weighted Kappa",
+            f"{float(qwk) * 100:.2f}%",
+        )
+
+    st.divider()
+
+    st.subheader(
+        "Evaluation Metrics"
     )
 
-
-    class_cols = st.columns(5)
-
-    for i, col in enumerate(class_cols):
-
-        with col:
-
-            st.markdown(
-                f"""
-                <div class="glass-card">
-
-                    <div class="card-label">
-                        Class
-                    </div>
-
-                    <div class="card-value">
-                        {i}
-                    </div>
-
-                    <div class="card-description">
-                        {GRADE_NAMES[i]}
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-
-    st.markdown(
-        "### Model Performance"
-    )
-
-
-    performance_df = pd.DataFrame(
+    performance_table = pd.DataFrame(
         {
             "Metric": [
                 "Accuracy",
@@ -773,74 +1262,174 @@ elif page == "Model":
                 "Quadratic Weighted Kappa",
             ],
             "Score": [
-                0.6093,
-                0.5989,
-                0.7707,
+                float(accuracy),
+                float(macro_f1),
+                float(qwk),
             ],
         }
     )
 
-
-    performance_df["Score"] = (
-        performance_df["Score"] * 100
+    performance_table[
+        "Score"
+    ] = (
+        performance_table[
+            "Score"
+        ] * 100
     ).round(2)
 
+    performance_table[
+        "Interpretation"
+    ] = [
+        "Overall classification accuracy",
+        "Average F1 performance across grades",
+        "Ordinal agreement metric",
+    ]
 
     st.dataframe(
-        performance_df,
+        performance_table,
         hide_index=True,
         width="stretch",
     )
 
+    st.divider()
+
+    st.subheader(
+        "Severity Classes"
+    )
+
+    classes = pd.DataFrame(
+        {
+            "Grade": [
+                "Grade 0",
+                "Grade 1",
+                "Grade 2",
+                "Grade 3",
+                "Grade 4",
+            ],
+            "Description": [
+                GRADE_DESCRIPTIONS[i]
+                for i in range(5)
+            ],
+        }
+    )
+
+    st.dataframe(
+        classes,
+        hide_index=True,
+        width="stretch",
+    )
+
+    st.divider()
+
+    st.subheader(
+        "Model Configuration"
+    )
+
+    config_col1, config_col2 = st.columns(2)
+
+    with config_col1:
+
+        st.write(
+            "**Architecture**"
+        )
+
+        st.code(
+            MODEL_ARCHITECTURE
+        )
+
+        st.write(
+            "**Experiment**"
+        )
+
+        st.code(
+            MODEL_EXPERIMENT
+        )
+
+        st.write(
+            "**Input size**"
+        )
+
+        st.code(
+            f"{IMAGE_SIZE} × {IMAGE_SIZE} × 3"
+        )
+
+    with config_col2:
+
+        st.write(
+            "**Number of classes**"
+        )
+
+        st.code(
+            "5"
+        )
+
+        st.write(
+            "**Ordinal thresholds**"
+        )
+
+        st.code(
+            "4"
+        )
+
+        st.write(
+            "**Inference device**"
+        )
+
+        st.code(
+            "CPU / auto"
+        )
+
 
 # ============================================================
-# EXPLAINABILITY PAGE
+# EXPLAINABILITY
 # ============================================================
 
 elif page == "Explainability":
 
-    st.markdown(
-        '<div class="section-title">Explainable AI</div>',
-        unsafe_allow_html=True,
+    st.header(
+        "Explainable AI"
     )
 
-    st.markdown(
+    st.write(
         """
-        <div class="section-description">
-
-            Grad-CAM is used to visualize image regions that
-            contribute to the model's prediction. This provides
-            an additional inspection layer beyond the numerical
-            prediction.
-
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-    result = st.session_state.get(
-        "prediction_result"
+        Grad-CAM provides a visual explanation of which
+        regions of the X-ray contributed to the model's
+        prediction.
+        """
     )
 
     image_path = st.session_state.get(
         "prediction_image"
     )
 
+    result = st.session_state.get(
+        "prediction_result"
+    )
 
-    if result is None or image_path is None:
+    if image_path is None or result is None:
 
         st.info(
-            "Run a prediction first to generate a Grad-CAM explanation."
+            "Run a prediction first. "
+            "The Grad-CAM explanation will then use "
+            "the same uploaded X-ray."
         )
 
     else:
 
-        generate = st.button(
-            "Generate Grad-CAM Explanation",
-            width="stretch",
+        predicted_grade = extract_grade(
+            result
         )
 
+        st.success(
+            f"Current prediction: "
+            f"Grade {predicted_grade}"
+        )
+
+        generate = st.button(
+            "Generate Grad-CAM",
+            width="stretch",
+            type="primary",
+        )
 
         if generate:
 
@@ -850,205 +1439,386 @@ elif page == "Explainability":
 
                 try:
 
-                    gradcam_result = generate_gradcam(
-                        image_path
+                    gradcam_result = run_gradcam(
+                        image_path,
+                        predicted_grade,
                     )
 
                     st.session_state[
                         "gradcam_result"
                     ] = gradcam_result
 
+                    st.success(
+                        "Grad-CAM generated successfully."
+                    )
+
                 except Exception as exc:
 
                     st.error(
-                        f"Grad-CAM generation failed: {exc}"
+                        "Grad-CAM generation failed."
                     )
 
+                    st.exception(
+                        exc
+                    )
 
         gradcam_result = st.session_state.get(
             "gradcam_result"
         )
 
+        if gradcam_result is not None:
 
-        if gradcam_result:
+            st.divider()
 
-            st.markdown(
-                "### Model Attention"
+            st.subheader(
+                "Generated Explanation"
             )
 
-
-            # Support dictionary-style Grad-CAM results
+            # --------------------------------------------
+            # Handle dictionary outputs
+            # --------------------------------------------
 
             if isinstance(
                 gradcam_result,
-                dict
+                dict,
             ):
 
-                original = (
-                    gradcam_result.get(
-                        "original"
-                    )
-                )
+                preferred_items = []
 
-                overlay = (
-                    gradcam_result.get(
-                        "overlay"
-                    )
-                )
+                for key, value in gradcam_result.items():
 
-                heatmap = (
-                    gradcam_result.get(
-                        "heatmap"
-                    )
-                )
+                    if isinstance(
+                        value,
+                        (str, Path),
+                    ):
 
+                        path = Path(value)
 
-                visual_cols = st.columns(
-                    3
-                )
+                        if (
+                            path.exists()
+                            and path.is_file()
+                            and path.suffix.lower()
+                            in {
+                                ".jpg",
+                                ".jpeg",
+                                ".png",
+                                ".webp",
+                            }
+                        ):
 
+                            preferred_items.append(
+                                (
+                                    key,
+                                    path,
+                                )
+                            )
 
-                for col, (
-                    title,
-                    path
-                ) in zip(
-                    visual_cols,
-                    [
-                        ("Original", original),
-                        ("Heatmap", heatmap),
-                        ("Overlay", overlay),
-                    ],
-                ):
+                if preferred_items:
 
-                    with col:
-
-                        st.markdown(
-                            f"**{title}**"
+                    cols = st.columns(
+                        min(
+                            len(
+                                preferred_items
+                            ),
+                            3,
                         )
+                    )
 
-                        if path and Path(
-                            path
-                        ).exists():
+                    for index, (
+                        key,
+                        path,
+                    ) in enumerate(
+                        preferred_items
+                    ):
+
+                        with cols[
+                            index % len(cols)
+                        ]:
+
+                            st.caption(
+                                str(key).replace(
+                                    "_",
+                                    " ",
+                                ).title()
+                            )
 
                             st.image(
                                 str(path),
                                 width="stretch",
                             )
 
-                        else:
+                else:
 
-                            st.info(
-                                "Visualization unavailable."
+                    image_files = (
+                        find_image_files(
+                            gradcam_result
+                        )
+                    )
+
+                    if image_files:
+
+                        cols = st.columns(
+                            min(
+                                len(
+                                    image_files
+                                ),
+                                3,
                             )
+                        )
+
+                        for index, path in enumerate(
+                            image_files
+                        ):
+
+                            with cols[
+                                index % len(cols)
+                            ]:
+
+                                st.caption(
+                                    path.name
+                                )
+
+                                st.image(
+                                    str(path),
+                                    width="stretch",
+                                )
+
+                    else:
+
+                        st.json(
+                            normalize_result_for_json(
+                                gradcam_result
+                            )
+                        )
 
             else:
 
-                st.info(
-                    "Grad-CAM generated successfully."
+                image_files = (
+                    find_image_files(
+                        gradcam_result
+                    )
                 )
+
+                if image_files:
+
+                    cols = st.columns(
+                        min(
+                            len(image_files),
+                            3,
+                        )
+                    )
+
+                    for index, path in enumerate(
+                        image_files
+                    ):
+
+                        with cols[
+                            index % len(cols)
+                        ]:
+
+                            st.caption(
+                                path.name
+                            )
+
+                            st.image(
+                                str(path),
+                                width="stretch",
+                            )
+
+                else:
+
+                    st.write(
+                        gradcam_result
+                    )
+
+        st.divider()
+
+        st.subheader(
+            "Why Grad-CAM?"
+        )
+
+        st.write(
+            """
+            The prediction probability alone does not show
+            where the model is focusing. Grad-CAM adds an
+            interpretability layer by producing activation
+            maps over the input image.
+
+            This is particularly useful for a medical imaging
+            research prototype because it allows the prediction
+            to be visually inspected rather than treated as
+            an unexplained classification score.
+            """
+        )
 
 
 # ============================================================
-# SYSTEM PAGE
+# SYSTEM
 # ============================================================
 
 elif page == "System":
 
-    st.markdown(
-        '<div class="section-title">System Architecture</div>',
-        unsafe_allow_html=True,
+    st.header(
+        "System Architecture"
     )
 
-
-    st.markdown(
+    st.write(
         """
-        <div class="section-description">
-
-            The application separates the presentation layer,
-            inference service and model artifact, allowing the
-            same model to be consumed locally, through the API
-            or through the Streamlit interface.
-
-        </div>
-        """,
-        unsafe_allow_html=True,
+        The project is organized as a deployable machine
+        learning application rather than a standalone notebook.
+        """
     )
 
-
-    architecture_cols = st.columns(4)
-
+    st.divider()
 
     architecture = [
         (
             "01",
             "Streamlit",
-            "Interactive user interface",
+            "Interactive X-ray analysis interface",
         ),
         (
             "02",
             "FastAPI",
-            "REST inference service",
+            "REST inference API",
         ),
         (
             "03",
             "Ordinal ResNet50",
-            "Five-grade prediction model",
+            "Five-grade severity classification",
         ),
         (
             "04",
-            "Hugging Face",
-            "Versioned model artifact",
+            "Hugging Face Hub",
+            "Remote model artifact storage",
+        ),
+        (
+            "05",
+            "Docker",
+            "Containerized deployment",
+        ),
+        (
+            "06",
+            "Pytest",
+            "Automated testing",
+        ),
+        (
+            "07",
+            "Monitoring",
+            "Prediction and system monitoring",
+        ),
+        (
+            "08",
+            "Grad-CAM",
+            "Visual explainability",
         ),
     ]
 
-
-    for col, (
-        number,
-        title,
-        description,
-    ) in zip(
-        architecture_cols,
-        architecture
+    for row_start in range(
+        0,
+        len(architecture),
+        4,
     ):
 
-        with col:
+        row = architecture[
+            row_start:row_start + 4
+        ]
 
-            st.markdown(
-                f"""
-                <div class="glass-card">
+        cols = st.columns(
+            len(row)
+        )
 
-                    <div class="card-label">
-                        {number}
-                    </div>
+        for col, (
+            number,
+            title,
+            description,
+        ) in zip(
+            cols,
+            row,
+        ):
 
-                    <div style="
-                        font-size:20px;
-                        font-weight:800;
-                        margin-bottom:7px;
-                    ">
-                        {title}
-                    </div>
+            with col:
 
-                    <div style="
-                        color:#777c89;
-                        font-size:12px;
-                        line-height:1.6;
-                    ">
-                        {description}
-                    </div>
+                st.markdown(
+                    f"### {number}"
+                )
 
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                st.markdown(
+                    f"**{title}**"
+                )
 
+                st.caption(
+                    description
+                )
 
-    st.markdown(
-        "### Engineering Stack"
+    st.divider()
+
+    st.subheader(
+        "Deployment Information"
     )
 
+    deploy1, deploy2 = st.columns(2)
+
+    with deploy1:
+
+        st.write(
+            "**Model repository**"
+        )
+
+        st.code(
+            MODEL_REPOSITORY
+        )
+
+        st.write(
+            "**Architecture**"
+        )
+
+        st.code(
+            MODEL_ARCHITECTURE
+        )
+
+        st.write(
+            "**Model experiment**"
+        )
+
+        st.code(
+            MODEL_EXPERIMENT
+        )
+
+    with deploy2:
+
+        st.write(
+            "**Model SHA256**"
+        )
+
+        st.code(
+            MODEL_SHA256
+        )
+
+        st.write(
+            "**Input**"
+        )
+
+        st.code(
+            f"{IMAGE_SIZE} × {IMAGE_SIZE} RGB"
+        )
+
+        st.write(
+            "**Output**"
+        )
+
+        st.code(
+            "Grade 0 → Grade 4"
+        )
+
+    st.divider()
+
+    st.subheader(
+        "Engineering Stack"
+    )
 
     technologies = [
+        "Python",
         "PyTorch",
         "Torchvision",
         "ResNet50",
@@ -1063,48 +1833,36 @@ elif page == "System":
         "Docker Compose",
         "Pytest",
         "GitHub Actions",
-        "Hugging Face Hub",
+        "Hugging Face",
         "MLflow",
+        "Prometheus",
     ]
 
-
     st.write(
-        " · ".join(technologies)
-    )
-
-
-    st.markdown(
-        "### Model Artifact"
-    )
-
-
-    st.code(
-        "SHA256: "
-        "f2200b43966dce1498e47ad6ee45cb35e5cec831246b7667323e16fd9d7e1667",
-        language="text",
+        " · ".join(
+            technologies
+        )
     )
 
 
 # ============================================================
-# DISCLAIMER
+# FOOTER
 # ============================================================
 
 st.markdown(
     """
-    <div class="footer">
+    <div class="footer-line">
 
-        <strong>Research / Educational Prototype</strong>
-        <br><br>
+        <strong>AI Knee Osteoarthritis Detection</strong>
+        <br>
 
-        This application is not a certified medical device and
-        should not be used independently for diagnosis or treatment
-        decisions. Model predictions and Grad-CAM visualizations
-        are intended for research and demonstration purposes.
+        Ordinal ResNet50 · Experiment 5 · Explainable AI
 
         <br><br>
 
-        AI Knee Osteoarthritis Detection · Experiment 5 ·
-        Ordinal ResNet50
+        Research / educational prototype.
+        Model predictions should not be used as an
+        independent medical diagnosis.
 
     </div>
     """,
