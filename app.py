@@ -1761,57 +1761,54 @@ if page == "Prediction":
                     )
 
             # -----------------------------------------------
-            # PROBABILITY DISTRIBUTION
+            # CLASS PROBABILITY DISTRIBUTION
             # -----------------------------------------------
 
             st.divider()
 
-            st.subheader(
-                "Class Probability Distribution"
-            )
+            st.subheader("Class Probability Distribution")
 
-            if probabilities is not None:
+            probabilities = extract_probabilities(result)
 
-                for index, probability in enumerate(
-                    probabilities
-                ):
+            if probabilities is not None and len(probabilities) == 5:
 
-                    left, right = st.columns(
-                        [5, 1]
-                    )
+               probability_df = pd.DataFrame({
+               "Grade": GRADE_NAMES,
+               "Probability": probabilities
+               })
 
-                    with left:
+               # -------------------------------------------
+               # BAR CHART
+               # -------------------------------------------
 
-                        st.write(
-                            GRADE_NAMES[index]
-                        )
+               st.bar_chart(
+               probability_df.set_index("Grade"),
+               y="Probability",
+               height=350,
+               )
 
-                    with right:
+               # -------------------------------------------
+               # EXACT VALUES
+               # -------------------------------------------
 
-                        st.write(
-                            f"{probability:.2f}%"
-                        )
+               cols = st.columns(5)
 
-                    st.progress(
-                        int(
-                            min(
-                                max(
-                                    probability,
-                                    0,
-                                ),
-                                100,
-                            )
-                        )
-                    )
+               for i, probability in enumerate(probabilities):
+
+               with cols[i]:
+
+                    st.metric(
+                GRADE_NAMES[i],
+                f"{probability:.2f}%"
+                )
 
             else:
 
-                st.info(
-                    "The current prediction function does not "
-                    "return a Grade 0–4 probability distribution. "
-                    "The UI will not fabricate probabilities."
-                )
-
+                  st.warning(
+        "Class probability distribution is not available "
+        "from the current prediction response."
+            )
+                
             # -----------------------------------------------
             # CLINICAL INTERPRETATION
             # -----------------------------------------------
